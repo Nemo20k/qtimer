@@ -51,3 +51,20 @@ The URL is the source of truth. qtimer does not use accounts, persistence, cooki
 npm test
 npm run build
 ```
+
+## Publish on GitHub Pages
+
+The repository includes a GitHub Actions workflow at `.github/workflows/deploy-pages.yml`.
+It builds and publishes qtimer automatically whenever changes are pushed to `main`.
+
+After enabling GitHub Pages with **Settings → Pages → Build and deployment → Source: GitHub Actions**, the app will be available at:
+
+```text
+https://YOUR_USERNAME.github.io/qtimer/
+```
+
+Timer URLs work by adding query parameters, for example:
+
+```text
+https://YOUR_USERNAME.github.io/qtimer/?timers=20:Work,10:Rest
+```
