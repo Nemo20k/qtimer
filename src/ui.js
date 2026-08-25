@@ -15,15 +15,11 @@ function formatDuration(milliseconds) {
     : `${pad(minutes)}:${pad(seconds)}`;
 }
 
-function formatTotalDuration(seconds) {
-  return formatDuration(seconds * 1000);
-}
-
 function setHidden(element, hidden) {
   element.hidden = hidden;
 }
 
-export function mountApp(root, { title, timers, totalDuration }, engine) {
+export function mountApp(root, { title, steps }, engine) {
   root.innerHTML = `
     <main class="app-shell" aria-label="qtimer">
       <header class="workout-header">
@@ -34,8 +30,7 @@ export function mountApp(root, { title, timers, totalDuration }, engine) {
       <section class="workout-area" aria-label="Timer controls">
         <div class="ready-view">
           <p class="eyebrow">READY TO BEGIN</p>
-          <p class="ready-total"></p>
-          <p class="ready-periods"></p>
+          <p class="ready-steps"></p>
           <p class="ready-first-label"></p>
           <button class="primary-button start-button" type="button">START</button>
         </div>
@@ -43,12 +38,19 @@ export function mountApp(root, { title, timers, totalDuration }, engine) {
         <div class="running-view">
           <div class="period-count" aria-live="polite"></div>
           <p class="current-label"></p>
-          <div class="countdown-wrap">
-            <svg class="progress-ring" viewBox="0 0 320 320" aria-hidden="true">
-              <circle class="ring-track" cx="160" cy="160" r="${RING_RADIUS}"></circle>
-              <circle class="ring-progress" cx="160" cy="160" r="${RING_RADIUS}"></circle>
-            </svg>
-            <p class="countdown" aria-label="Current timer remaining"></p>
+          <div class="time-step-view">
+            <div class="countdown-wrap">
+              <svg class="progress-ring" viewBox="0 0 320 320" aria-hidden="true">
+                <circle class="ring-track" cx="160" cy="160" r="${RING_RADIUS}"></circle>
+                <circle class="ring-progress" cx="160" cy="160" r="${RING_RADIUS}"></circle>
+              </svg>
+              <p class="countdown" aria-label="Current timer remaining"></p>
+            </div>
+          </div>
+          <div class="rep-step-view">
+            <p class="rep-count"></p>
+            <p class="rep-unit">REPS</p>
+            <button class="primary-button done-button" type="button">DONE</button>
           </div>
           <p class="tap-hint">Tap anywhere to pause</p>
         </div>
@@ -57,6 +59,7 @@ export function mountApp(root, { title, timers, totalDuration }, engine) {
           <p class="eyebrow state-label">PAUSED</p>
           <p class="paused-label"></p>
           <p class="paused-countdown"></p>
+          <p class="paused-reps"></p>
           <div class="button-row">
             <button class="primary-button resume-button" type="button">RESUME</button>
             <button class="secondary-button paused-restart-button" type="button">RESTART</button>
@@ -72,7 +75,7 @@ export function mountApp(root, { title, timers, totalDuration }, engine) {
       </section>
 
       <footer class="workout-footer">
-        <p class="total-remaining"></p>
+        <p class="workout-elapsed"></p>
       </footer>
     </main>
   `;
@@ -84,22 +87,25 @@ export function mountApp(root, { title, timers, totalDuration }, engine) {
   const runningView = root.querySelector(".running-view");
   const pausedView = root.querySelector(".paused-view");
   const completedView = root.querySelector(".completed-view");
+  const timeStepView = root.querySelector(".time-step-view");
+  const repStepView = root.querySelector(".rep-step-view");
   const runningPeriodCount = root.querySelector(".period-count");
   const currentLabel = root.querySelector(".current-label");
   const countdown = root.querySelector(".countdown");
-  const totalRemaining = root.querySelector(".total-remaining");
   const ringProgress = root.querySelector(".ring-progress");
+  const repCount = root.querySelector(".rep-count");
+  const workoutElapsed = root.querySelector(".workout-elapsed");
   const pausedLabel = root.querySelector(".paused-label");
   const pausedCountdown = root.querySelector(".paused-countdown");
+  const pausedReps = root.querySelector(".paused-reps");
   const completedSummary = root.querySelector(".completed-summary");
   const statusText = root.querySelector(".state-label");
   let animationFrame = null;
 
   titleElement.textContent = title;
   titleElement.hidden = !title;
-  root.querySelector(".ready-total").textContent = `Total duration ${formatTotalDuration(totalDuration)}`;
-  root.querySelector(".ready-periods").textContent = `${timers.length} timer period${timers.length === 1 ? "" : "s"}`;
-  root.querySelector(".ready-first-label").textContent = `First: ${timers[0].label || "Untitled period"}`;
+  root.querySelector(".ready-steps").textContent = `${steps.length} step${steps.length === 1 ? "" : "s"}`;
+  root.querySelector(".ready-first-label").textContent = `First: ${steps[0].label}`;
 
   function stopAnimationLoop() {
     if (animationFrame !== null) {
@@ -110,33 +116,37 @@ export function mountApp(root, { title, timers, totalDuration }, engine) {
 
   function render(now) {
     const snapshot = engine.snapshot(now);
+    const isRunningOrPaused = snapshot.status === TIMER_STATES.RUNNING || snapshot.status === TIMER_STATES.PAUSED;
+    const isTimeStep = snapshot.currentStep.type === "time";
+
     appShell.dataset.state = snapshot.status.toLowerCase();
     statusText.textContent = snapshot.status === TIMER_STATES.PAUSED ? "PAUSED" : "COMPLETE";
-
     setHidden(readyView, snapshot.status !== TIMER_STATES.READY);
     setHidden(runningView, snapshot.status !== TIMER_STATES.RUNNING);
     setHidden(pausedView, snapshot.status !== TIMER_STATES.PAUSED);
     setHidden(completedView, snapshot.status !== TIMER_STATES.COMPLETED);
-    setHidden(totalRemaining, snapshot.status === TIMER_STATES.READY);
+    setHidden(workoutElapsed, snapshot.status === TIMER_STATES.READY);
 
-    if (snapshot.status === TIMER_STATES.RUNNING || snapshot.status === TIMER_STATES.PAUSED) {
-      runningPeriodCount.textContent = `${snapshot.currentTimerNumber} / ${snapshot.totalPeriods}`;
-      currentLabel.textContent = snapshot.currentTimer.label || "Untitled period";
-      countdown.textContent = formatDuration(snapshot.currentRemainingMs);
-      countdown.setAttribute("aria-label", `${formatDuration(snapshot.currentRemainingMs)} remaining`);
-      totalRemaining.textContent = `Workout remaining ${formatDuration(snapshot.totalRemainingMs)}`;
-      pausedLabel.textContent = snapshot.currentTimer.label || "Untitled period";
-      pausedCountdown.textContent = formatDuration(snapshot.currentRemainingMs);
-      pausedCountdown.setAttribute("aria-label", `${formatDuration(snapshot.currentRemainingMs)} remaining`);
+    if (isRunningOrPaused) {
+      runningPeriodCount.textContent = `${snapshot.currentStepNumber} / ${snapshot.totalSteps}`;
+      currentLabel.textContent = snapshot.currentStep.label;
+      timeStepView.hidden = !isTimeStep;
+      repStepView.hidden = isTimeStep;
+      countdown.textContent = formatDuration(snapshot.currentRemainingMs ?? 0);
+      countdown.setAttribute("aria-label", `${formatDuration(snapshot.currentRemainingMs ?? 0)} remaining`);
+      repCount.textContent = snapshot.currentStep.value;
+      workoutElapsed.textContent = `ELAPSED ${formatDuration(snapshot.workoutElapsedMs)}`;
+
+      pausedLabel.textContent = snapshot.currentStep.label;
+      pausedCountdown.textContent = isTimeStep ? formatDuration(snapshot.currentRemainingMs) : "";
+      pausedReps.textContent = isTimeStep ? "" : `${snapshot.currentStep.value} REPS`;
+      ringProgress.style.strokeDashoffset = `${RING_CIRCUMFERENCE * (1 - snapshot.currentProgress)}`;
     }
 
     if (snapshot.status === TIMER_STATES.COMPLETED) {
-      completedSummary.textContent = `${snapshot.totalPeriods} period${snapshot.totalPeriods === 1 ? "" : "s"} · ${formatTotalDuration(snapshot.totalDuration)}`;
-      totalRemaining.textContent = "Workout remaining 00:00";
+      completedSummary.textContent = `${snapshot.totalSteps} step${snapshot.totalSteps === 1 ? "" : "s"} · ${formatDuration(snapshot.workoutElapsedMs)}`;
+      workoutElapsed.textContent = `ELAPSED ${formatDuration(snapshot.workoutElapsedMs)}`;
     }
-
-    const offset = RING_CIRCUMFERENCE * (1 - snapshot.currentProgress);
-    ringProgress.style.strokeDashoffset = `${offset}`;
 
     if (snapshot.status === TIMER_STATES.RUNNING) {
       animationFrame = requestAnimationFrame(render);
@@ -152,6 +162,12 @@ export function mountApp(root, { title, timers, totalDuration }, engine) {
 
   root.querySelector(".start-button").addEventListener("click", () => {
     engine.start();
+    refresh();
+  });
+
+  root.querySelector(".done-button").addEventListener("click", (event) => {
+    event.stopPropagation();
+    engine.done();
     refresh();
   });
 
@@ -201,7 +217,7 @@ export function renderError(root, message) {
         <p class="eyebrow">UNABLE TO LOAD TIMER</p>
         <h1>There is a problem with this URL</h1>
         <p>${message}</p>
-        <p class="error-example">Try: <code>?timers=20:Work,10:Rest</code></p>
+        <p class="error-example">Try: <code>?step=time:20:Work&amp;step=time:10:Rest</code></p>
       </section>
     </main>
   `;

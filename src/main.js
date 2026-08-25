@@ -9,6 +9,6 @@ const root = document.querySelector("#app");
 if (!result.ok) {
   renderError(root, result.message);
 } else {
-  const engine = new TimerEngine(result.timers);
+  const engine = new TimerEngine(result.steps);
   mountApp(root, result, engine);
 }

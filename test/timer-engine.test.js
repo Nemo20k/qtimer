@@ -2,12 +2,13 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { TIMER_STATES, TimerEngine } from "../src/timer-engine.js";
 
-function setup() {
+function setup(steps = [
+  { type: "time", value: 10, label: "Work" },
+  { type: "reps", value: 5, label: "Push-ups" },
+  { type: "time", value: 5, label: "Rest" },
+]) {
   let now = 0;
-  const engine = new TimerEngine([
-    { duration: 10, label: "Work" },
-    { duration: 5, label: "Rest" },
-  ], () => now);
+  const engine = new TimerEngine(steps, () => now);
 
   return {
     engine,
@@ -17,34 +18,46 @@ function setup() {
   };
 }
 
-test("starts ready, transitions periods, and calculates total remaining time", () => {
+test("starts ready and automatically transitions timed steps", () => {
   const { engine, advance } = setup();
 
   assert.equal(engine.snapshot().status, TIMER_STATES.READY);
-  assert.equal(engine.snapshot().totalRemainingMs, 15000);
-
   engine.start();
-  advance(4000);
-  assert.equal(engine.snapshot().currentTimerIndex, 0);
-  assert.equal(engine.snapshot().currentRemainingMs, 6000);
-  assert.equal(engine.snapshot().totalRemainingMs, 11000);
+  advance(10000);
 
-  advance(7000);
   const snapshot = engine.snapshot();
-  assert.equal(snapshot.currentTimerIndex, 1);
-  assert.equal(snapshot.currentRemainingMs, 4000);
-  assert.equal(snapshot.totalRemainingMs, 4000);
+  assert.equal(snapshot.status, TIMER_STATES.RUNNING);
+  assert.equal(snapshot.currentStepIndex, 1);
+  assert.equal(snapshot.currentStep.type, "reps");
+  assert.equal(snapshot.workoutElapsedMs, 10000);
 });
 
-test("accounts for delayed updates without timer drift", () => {
+test("rep steps advance only through done", () => {
   const { engine, advance } = setup();
+
+  engine.start();
+  advance(10000);
+  engine.snapshot();
+  advance(3000);
+  assert.equal(engine.snapshot().currentStepIndex, 1);
+
+  engine.done();
+  assert.equal(engine.snapshot().currentStepIndex, 2);
+  assert.equal(engine.snapshot().currentStep.type, "time");
+});
+
+test("delayed updates can transition through multiple timed steps", () => {
+  const { engine, advance } = setup([
+    { type: "time", value: 10, label: "One" },
+    { type: "time", value: 5, label: "Two" },
+  ]);
 
   engine.start();
   advance(16000);
   assert.equal(engine.snapshot().status, TIMER_STATES.COMPLETED);
 });
 
-test("pause and resume preserve elapsed time", () => {
+test("elapsed workout time pauses and resumes accurately", () => {
   const { engine, advance } = setup();
 
   engine.start();
@@ -52,24 +65,31 @@ test("pause and resume preserve elapsed time", () => {
   engine.pause();
   advance(5000);
   assert.equal(engine.snapshot().status, TIMER_STATES.PAUSED);
-  assert.equal(engine.snapshot().currentRemainingMs, 6500);
+  assert.equal(engine.snapshot().workoutElapsedMs, 3500);
 
   engine.resume();
   advance(1000);
-  assert.equal(engine.snapshot().currentRemainingMs, 5500);
+  assert.equal(engine.snapshot().workoutElapsedMs, 4500);
 });
 
-test("restart returns to the initial ready state", () => {
+test("restart returns to step one and resets elapsed time", () => {
   const { engine, advance } = setup();
 
   engine.start();
   advance(12000);
-  assert.equal(engine.snapshot().currentTimerIndex, 1);
+  engine.done();
   engine.restart();
 
   const snapshot = engine.snapshot();
   assert.equal(snapshot.status, TIMER_STATES.READY);
-  assert.equal(snapshot.currentTimerIndex, 0);
-  assert.equal(snapshot.currentElapsedMs, 0);
-  assert.equal(snapshot.totalRemainingMs, 15000);
+  assert.equal(snapshot.currentStepIndex, 0);
+  assert.equal(snapshot.workoutElapsedMs, 0);
+});
+
+test("done on the final rep step completes the workout", () => {
+  const { engine } = setup([{ type: "reps", value: 6, label: "Push-ups" }]);
+
+  engine.start();
+  engine.done();
+  assert.equal(engine.snapshot().status, TIMER_STATES.COMPLETED);
 });

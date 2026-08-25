@@ -2,48 +2,40 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { parseTimerUrl } from "../src/parser.js";
 
-test("parses a valid sequence and title", () => {
-  const result = parseTimerUrl("?title=Upper%20Body&timers=60:Push-ups,30:Rest");
+test("parses repeated timed and rep steps in order", () => {
+  const result = parseTimerUrl("?title=Push+Workout&step=reps:6:Push-ups&step=time:50:Rest&step=reps:6:Push-ups");
 
   assert.equal(result.ok, true);
-  assert.equal(result.title, "Upper Body");
-  assert.deepEqual(result.timers, [
-    { duration: 60, label: "Push-ups" },
-    { duration: 30, label: "Rest" },
+  assert.equal(result.title, "Push Workout");
+  assert.deepEqual(result.steps, [
+    { type: "reps", value: 6, label: "Push-ups" },
+    { type: "time", value: 50, label: "Rest" },
+    { type: "reps", value: 6, label: "Push-ups" },
   ]);
-  assert.equal(result.totalDuration, 90);
 });
 
-test("decodes arbitrary label text, including commas and colons", () => {
-  const result = parseTimerUrl("?timers=20:Kettlebell%20swings%2C%20fast%3A%20round");
+test("preserves colons and decodes arbitrary label text", () => {
+  const result = parseTimerUrl("?step=time:20:Kettlebell%20swings%3A%20fast%20round");
 
   assert.equal(result.ok, true);
-  assert.equal(result.timers[0].label, "Kettlebell swings, fast: round");
+  assert.equal(result.steps[0].label, "Kettlebell swings: fast round");
 });
 
-test("rejects a missing timers parameter", () => {
+test("rejects missing steps", () => {
   const result = parseTimerUrl("?title=Missing");
 
   assert.equal(result.ok, false);
-  assert.match(result.message, /missing.*timers/i);
+  assert.match(result.message, /at least one step/i);
 });
 
-test("rejects an empty timer list", () => {
-  const result = parseTimerUrl("?timers=");
-
-  assert.equal(result.ok, false);
-  assert.match(result.message, /cannot be empty/i);
+test("rejects unknown type, malformed value, zero, and negative values", () => {
+  assert.match(parseTimerUrl("?step=rounds:5:Work").message, /unknown type/i);
+  assert.match(parseTimerUrl("?step=time:nope:Work").message, /invalid numeric/i);
+  assert.match(parseTimerUrl("?step=reps:0:Push-ups").message, /greater than zero/i);
+  assert.match(parseTimerUrl("?step=time:-5:Rest").message, /greater than zero/i);
 });
 
-test("rejects malformed timer entries", () => {
-  const result = parseTimerUrl("?timers=20");
-
-  assert.equal(result.ok, false);
-  assert.match(result.message, /duration:label/i);
-});
-
-test("rejects non-numeric, zero, and negative durations", () => {
-  assert.equal(parseTimerUrl("?timers=abc:Work").ok, false);
-  assert.equal(parseTimerUrl("?timers=0:Work").ok, false);
-  assert.equal(parseTimerUrl("?timers=-5:Work").ok, false);
+test("rejects missing labels and fractional reps", () => {
+  assert.match(parseTimerUrl("?step=time:20:").message, /label/i);
+  assert.match(parseTimerUrl("?step=reps:2.5:Push-ups").message, /whole number/i);
 });

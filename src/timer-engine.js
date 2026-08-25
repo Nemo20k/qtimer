@@ -6,17 +6,17 @@ export const TIMER_STATES = Object.freeze({
 });
 
 export class TimerEngine {
-  constructor(timers, clock = () => performance.now()) {
-    if (!Array.isArray(timers) || timers.length === 0) {
-      throw new Error("TimerEngine requires at least one timer.");
+  constructor(steps, clock = () => performance.now()) {
+    if (!Array.isArray(steps) || steps.length === 0) {
+      throw new Error("TimerEngine requires at least one step.");
     }
 
-    this.timers = timers;
+    this.steps = steps;
     this.clock = clock;
-    this.totalDuration = timers.reduce((total, timer) => total + timer.duration, 0);
     this.status = TIMER_STATES.READY;
-    this.currentTimerIndex = 0;
+    this.currentStepIndex = 0;
     this.currentElapsedMs = 0;
+    this.workoutElapsedMs = 0;
     this.periodStartedAt = null;
   }
 
@@ -43,65 +43,83 @@ export class TimerEngine {
 
   restart() {
     this.status = TIMER_STATES.READY;
-    this.currentTimerIndex = 0;
+    this.currentStepIndex = 0;
     this.currentElapsedMs = 0;
+    this.workoutElapsedMs = 0;
     this.periodStartedAt = null;
   }
 
-  update(now = this.clock()) {
-    if (this.status !== TIMER_STATES.RUNNING || this.periodStartedAt === null) {
-      return;
-    }
+  done() {
+    if (this.status !== TIMER_STATES.RUNNING) return;
+    this.update(this.clock());
+    if (this.status !== TIMER_STATES.RUNNING || this.currentStep.type !== "reps") return;
+    this.advanceStep();
+  }
 
-    const elapsedSinceLastUpdate = Math.max(0, now - this.periodStartedAt);
-    this.currentElapsedMs += elapsedSinceLastUpdate;
+  update(now = this.clock()) {
+    if (this.status !== TIMER_STATES.RUNNING || this.periodStartedAt === null) return;
+
+    let elapsedSinceLastUpdate = Math.max(0, now - this.periodStartedAt);
+    this.workoutElapsedMs += elapsedSinceLastUpdate;
     this.periodStartedAt = now;
 
-    while (this.currentElapsedMs >= this.currentDurationMs()) {
-      this.currentElapsedMs -= this.currentDurationMs();
+    while (this.currentStep.type === "time") {
+      const stepDurationMs = this.currentStep.value * 1000;
+      const remainingInStepMs = stepDurationMs - this.currentElapsedMs;
 
-      if (this.currentTimerIndex === this.timers.length - 1) {
-        this.currentElapsedMs = this.currentDurationMs();
-        this.status = TIMER_STATES.COMPLETED;
-        this.periodStartedAt = null;
+      if (elapsedSinceLastUpdate < remainingInStepMs) {
+        this.currentElapsedMs += elapsedSinceLastUpdate;
         return;
       }
 
-      this.currentTimerIndex += 1;
+      elapsedSinceLastUpdate -= remainingInStepMs;
+      this.currentElapsedMs = stepDurationMs;
+      this.advanceStep();
+
+      if (this.status === TIMER_STATES.COMPLETED) return;
     }
+
+    // Rep steps do not auto-advance. Their time still contributes to the
+    // workout elapsed clock, while currentElapsedMs is only for bookkeeping.
+    this.currentElapsedMs += elapsedSinceLastUpdate;
+  }
+
+  advanceStep() {
+    if (this.currentStepIndex === this.steps.length - 1) {
+      this.status = TIMER_STATES.COMPLETED;
+      this.currentElapsedMs = 0;
+      this.periodStartedAt = null;
+      return;
+    }
+
+    this.currentStepIndex += 1;
+    this.currentElapsedMs = 0;
   }
 
   snapshot(now = this.clock()) {
     this.update(now);
-
-    const currentDurationMs = this.currentDurationMs();
-    const currentRemainingMs = this.status === TIMER_STATES.COMPLETED
-      ? 0
-      : Math.max(0, currentDurationMs - this.currentElapsedMs);
-    const completedDurationMs = this.timers
-      .slice(0, this.currentTimerIndex)
-      .reduce((total, timer) => total + timer.duration * 1000, 0);
-    const totalRemainingMs = this.status === TIMER_STATES.COMPLETED
-      ? 0
-      : Math.max(0, this.totalDuration * 1000 - completedDurationMs - this.currentElapsedMs);
+    const currentStep = this.currentStep;
+    const isTimeStep = currentStep.type === "time";
+    const durationMs = isTimeStep ? currentStep.value * 1000 : null;
 
     return {
       status: this.status,
-      currentTimerIndex: this.currentTimerIndex,
-      currentTimerNumber: this.currentTimerIndex + 1,
-      currentTimer: this.timers[this.currentTimerIndex],
+      currentStepIndex: this.currentStepIndex,
+      currentStepNumber: this.currentStepIndex + 1,
+      currentStep,
       currentElapsedMs: this.currentElapsedMs,
-      currentRemainingMs,
-      currentProgress: this.status === TIMER_STATES.COMPLETED
-        ? 0
-        : Math.min(1, this.currentElapsedMs / currentDurationMs),
-      totalRemainingMs,
-      totalDuration: this.totalDuration,
-      totalPeriods: this.timers.length,
+      workoutElapsedMs: this.workoutElapsedMs,
+      currentRemainingMs: isTimeStep && this.status !== TIMER_STATES.COMPLETED
+        ? Math.max(0, durationMs - this.currentElapsedMs)
+        : null,
+      currentProgress: isTimeStep && this.status !== TIMER_STATES.COMPLETED
+        ? Math.min(1, this.currentElapsedMs / durationMs)
+        : 0,
+      totalSteps: this.steps.length,
     };
   }
 
-  currentDurationMs() {
-    return this.timers[this.currentTimerIndex].duration * 1000;
+  get currentStep() {
+    return this.steps[this.currentStepIndex];
   }
 }

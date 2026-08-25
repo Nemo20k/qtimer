@@ -124,14 +124,13 @@ p {
   gap: 0.8rem;
 }
 
-.ready-total {
+.ready-steps {
   color: #f4f5f6;
   font-size: clamp(1.35rem, 6vw, 2rem);
   font-weight: 700;
   margin: 0.8rem 0 0;
 }
 
-.ready-periods,
 .ready-first-label,
 .paused-label,
 .completed-summary {
@@ -197,6 +196,35 @@ p {
 
 .running-view {
   gap: 0.7rem;
+}
+
+.rep-step-view {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+}
+
+.rep-count {
+  color: #ffffff;
+  font-size: clamp(6rem, 30vw, 12rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: -0.08em;
+  line-height: 0.9;
+  margin: 1.3rem 0 0;
+}
+
+.rep-unit {
+  color: #8c949d;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  margin: 0.8rem 0 0;
+}
+
+.done-button {
+  margin-top: 1.6rem;
+  min-width: 12rem;
 }
 
 .current-label {
@@ -268,11 +296,18 @@ p {
   text-align: center;
 }
 
-.total-remaining {
+.workout-elapsed {
   color: #8c949d;
   font-size: 0.85rem;
   font-variant-numeric: tabular-nums;
   margin: 0;
+}
+
+.paused-reps {
+  color: #ffffff;
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin: 0.8rem 0 0;
 }
 
 .state-label {

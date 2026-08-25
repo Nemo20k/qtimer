@@ -11,35 +11,35 @@ npm run dev
 
 Then open the local URL printed by Vite.
 
-## URL format: MVP v1
+## URL format: MVP v2
 
-The current URL format is **MVP v1** and may change later:
+The current URL format is **MVP v2**. It replaces the old `timers=` format with repeated `step=` parameters:
 
 ```text
-?title=Optional%20Title&timers=durationInSeconds:label,durationInSeconds:label
+?title=Optional%20Title&step=time:seconds:label&step=reps:count:label
 ```
 
-`title` is optional. `timers` is required. Labels may contain URL-encoded text, including spaces, commas, and colons.
+`title` is optional. At least one `step` is required. Step types are `time` and `reps`. Labels may contain URL-encoded text, including spaces and colons.
 
 Examples:
 
 ```text
-http://localhost:5173/?timers=10:Work,5:Rest,10:Work
+http://localhost:5173/?step=time:10:Work&step=time:5:Rest&step=time:10:Work
 ```
 
 ```text
-http://localhost:5173/?title=Upper%20Body&timers=60:Push-ups,30:Rest,60:Pull-ups,30:Rest,60:Squats
+http://localhost:5173/?title=Push+Workout&step=reps:6:Push-ups&step=time:50:Rest&step=reps:6:Push-ups&step=time:50:Rest
 ```
 
 ```text
-http://localhost:5173/?title=Tabata&timers=20:Work,10:Rest,20:Work,10:Rest,20:Work,10:Rest,20:Work,10:Rest
+http://localhost:5173/?title=Tabata&step=time:20:Work&step=time:10:Rest&step=time:20:Work&step=time:10:Rest
 ```
 
 The URL is the source of truth. qtimer does not use accounts, persistence, cookies, backend services, sound, analytics, or external APIs.
 
 ## Project structure
 
-- `src/parser.js` parses and validates the MVP v1 URL format.
+- `src/parser.js` parses and validates the MVP v2 URL format.
 - `src/timer-engine.js` contains timestamp-based timer state and calculations.
 - `src/ui.js` renders the application and handles interactions.
 - `src/styles.css` contains the responsive, fullscreen-oriented styling.
@@ -66,5 +66,5 @@ https://YOUR_USERNAME.github.io/qtimer/
 Timer URLs work by adding query parameters, for example:
 
 ```text
-https://YOUR_USERNAME.github.io/qtimer/?timers=20:Work,10:Rest
+https://YOUR_USERNAME.github.io/qtimer/?step=time:20:Work&step=time:10:Rest
 ```
