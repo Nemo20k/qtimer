@@ -111,6 +111,63 @@ test("done on the final rep step completes the workout", () => {
   assert.equal(engine.snapshot().status, TIMER_STATES.COMPLETED);
 });
 
+test("next and previous reset steps while running and narrate the new step", () => {
+  const { engine, advance } = setup();
+
+  engine.start();
+  engine.consumeEvents();
+  advance(4000);
+  engine.goToNextStep();
+  assert.equal(engine.snapshot().currentStepIndex, 1);
+  assert.equal(engine.snapshot().status, TIMER_STATES.RUNNING);
+  assert.equal(engine.snapshot().currentElapsedMs, 0);
+  assert.deepEqual(engine.consumeEvents(), [
+    { type: "transition" },
+    { type: "narrate", label: "Push-ups" },
+  ]);
+
+  engine.goToPreviousStep();
+  assert.equal(engine.snapshot().currentStepIndex, 0);
+  assert.equal(engine.snapshot().currentRemainingMs, 10000);
+  assert.deepEqual(engine.consumeEvents(), [
+    { type: "transition" },
+    { type: "narrate", label: "Work" },
+  ]);
+});
+
+test("navigation while paused changes step without events or resuming", () => {
+  const { engine, advance } = setup();
+
+  engine.start();
+  engine.consumeEvents();
+  advance(2000);
+  engine.pause();
+  engine.consumeEvents();
+  engine.goToNextStep();
+
+  assert.equal(engine.snapshot().status, TIMER_STATES.PAUSED);
+  assert.equal(engine.snapshot().currentStepIndex, 1);
+  assert.equal(engine.snapshot().currentElapsedMs, 0);
+  assert.deepEqual(engine.consumeEvents(), []);
+});
+
+test("previous at the first step does nothing and next at the final step completes", () => {
+  const { engine } = setup();
+
+  engine.start();
+  engine.consumeEvents();
+  engine.goToPreviousStep();
+  assert.equal(engine.snapshot().currentStepIndex, 0);
+  assert.deepEqual(engine.consumeEvents(), []);
+
+  const final = setup([{ type: "reps", value: 6, label: "Push-ups" }]).engine;
+  final.start();
+  final.consumeEvents();
+  final.goToNextStep();
+  assert.equal(final.snapshot().status, TIMER_STATES.COMPLETED);
+  assert.deepEqual(final.consumeEvents(), [{ type: "complete" }]);
+});
+
 test("narrates once when a timed step crosses the three-second threshold", () => {
   const { engine, advance } = setup();
 

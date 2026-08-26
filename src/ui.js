@@ -89,7 +89,12 @@ export function mountApp(root, { title, steps }, engine) {
           <p class="completed-summary"></p>
           <button class="primary-button completed-restart-button" type="button">RESTART</button>
         </div>
-          </section>
+
+        <nav class="step-navigation" aria-label="Step navigation" hidden>
+          <button class="secondary-button previous-button" type="button">← Previous</button>
+          <button class="secondary-button next-button" type="button">Next →</button>
+        </nav>
+      </section>
 
           <footer class="workout-footer">
             <p class="workout-elapsed"></p>
@@ -129,6 +134,9 @@ export function mountApp(root, { title, steps }, engine) {
   const runningView = root.querySelector(".running-view");
   const pausedView = root.querySelector(".paused-view");
   const completedView = root.querySelector(".completed-view");
+  const stepNavigation = root.querySelector(".step-navigation");
+  const previousButton = root.querySelector(".previous-button");
+  const nextButton = root.querySelector(".next-button");
   const timeStepView = root.querySelector(".time-step-view");
   const repStepView = root.querySelector(".rep-step-view");
   const runningPeriodCount = root.querySelector(".period-count");
@@ -246,6 +254,8 @@ export function mountApp(root, { title, steps }, engine) {
     setHidden(runningView, snapshot.status !== TIMER_STATES.RUNNING);
     setHidden(pausedView, snapshot.status !== TIMER_STATES.PAUSED);
     setHidden(completedView, snapshot.status !== TIMER_STATES.COMPLETED);
+    setHidden(stepNavigation, snapshot.status !== TIMER_STATES.RUNNING && snapshot.status !== TIMER_STATES.PAUSED);
+    previousButton.disabled = snapshot.currentStepIndex === 0;
     setHidden(workoutElapsed, snapshot.status === TIMER_STATES.READY);
     mobileListButton.textContent = `${snapshot.currentStepNumber} / ${snapshot.totalSteps} · View workout`;
 
@@ -361,6 +371,20 @@ export function mountApp(root, { title, steps }, engine) {
   root.querySelector(".done-button").addEventListener("click", (event) => {
     event.stopPropagation();
     engine.done();
+    refresh();
+  });
+
+  previousButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    cancelSpeech();
+    engine.goToPreviousStep();
+    refresh();
+  });
+
+  nextButton.addEventListener("click", (event) => {
+    event.stopPropagation();
+    cancelSpeech();
+    engine.goToNextStep();
     refresh();
   });
 

@@ -64,6 +64,44 @@ export class TimerEngine {
     this.advanceStep(true);
   }
 
+  goToNextStep() {
+    if (this.status !== TIMER_STATES.RUNNING && this.status !== TIMER_STATES.PAUSED) return;
+    if (this.status === TIMER_STATES.RUNNING) this.update(this.clock());
+    this.goToStep(this.currentStepIndex + 1);
+  }
+
+  goToPreviousStep() {
+    if (this.status !== TIMER_STATES.RUNNING && this.status !== TIMER_STATES.PAUSED) return;
+    if (this.status === TIMER_STATES.RUNNING) this.update(this.clock());
+    this.goToStep(this.currentStepIndex - 1);
+  }
+
+  goToStep(index) {
+    if (index < 0 || this.status === TIMER_STATES.COMPLETED) return;
+
+    const wasRunning = this.status === TIMER_STATES.RUNNING;
+    if (index >= this.steps.length) {
+      this.status = TIMER_STATES.COMPLETED;
+      this.currentElapsedMs = 0;
+      this.periodStartedAt = null;
+      this.announcedForStepIndex = null;
+      this.pendingEvents.push({ type: "complete" });
+      return;
+    }
+
+    this.currentStepIndex = index;
+    this.currentElapsedMs = 0;
+    this.announcedForStepIndex = null;
+
+    if (wasRunning) {
+      this.periodStartedAt = this.clock();
+      this.pendingEvents.push({ type: "transition" });
+      this.pendingEvents.push({ type: "narrate", label: this.currentStep.label });
+    } else {
+      this.periodStartedAt = null;
+    }
+  }
+
   update(now = this.clock(), allowNarration = true) {
     if (this.status !== TIMER_STATES.RUNNING || this.periodStartedAt === null) return;
 

@@ -39,6 +39,8 @@ The URL is the source of truth. qtimer does not use accounts, persistence, cooki
 
 When voice cues are enabled, pressing `START` announces the first step and shows a three-second get-ready countdown before the workout clock begins.
 
+While running or paused, `← Previous` and `Next →` move between steps. Navigation resets the selected step to its beginning; navigating beyond the final step completes the workout.
+
 ## Project structure
 
 - `src/parser.js` parses and validates the MVP v2 URL format.
