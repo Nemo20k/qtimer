@@ -106,6 +106,7 @@ p {
 }
 
 .ready-view,
+.prestart-view,
 .running-view,
 .paused-view,
 .completed-view {
@@ -122,6 +123,29 @@ p {
 
 .ready-view {
   gap: 0.8rem;
+}
+
+.prestart-view {
+  gap: 0.8rem;
+}
+
+.prestart-label {
+  color: #f4f5f6;
+  font-size: clamp(1.5rem, 7vw, 2.5rem);
+  font-weight: 750;
+  margin: 0;
+  max-width: min(92vw, 44rem);
+  overflow-wrap: anywhere;
+}
+
+.prestart-countdown {
+  color: #ffffff;
+  font-size: clamp(7rem, 32vw, 13rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  letter-spacing: -0.08em;
+  line-height: 0.9;
+  margin: 0.5rem 0 0;
 }
 
 .ready-steps {

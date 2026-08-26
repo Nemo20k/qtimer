@@ -23,7 +23,7 @@ test("starts ready and automatically transitions timed steps", () => {
 
   assert.equal(engine.snapshot().status, TIMER_STATES.READY);
   engine.start();
-  assert.deepEqual(engine.consumeEvents(), ["start"]);
+  assert.deepEqual(engine.consumeEvents(), [{ type: "start" }]);
   advance(10000);
 
   const snapshot = engine.snapshot();
@@ -31,7 +31,7 @@ test("starts ready and automatically transitions timed steps", () => {
   assert.equal(snapshot.currentStepIndex, 1);
   assert.equal(snapshot.currentStep.type, "reps");
   assert.equal(snapshot.workoutElapsedMs, 10000);
-  assert.deepEqual(engine.consumeEvents(), ["transition"]);
+  assert.deepEqual(engine.consumeEvents(), [{ type: "transition" }]);
   assert.deepEqual(engine.consumeEvents(), []);
 });
 
@@ -39,15 +39,18 @@ test("rep steps advance only through done", () => {
   const { engine, advance } = setup();
 
   engine.start();
-  assert.deepEqual(engine.consumeEvents(), ["start"]);
+  assert.deepEqual(engine.consumeEvents(), [{ type: "start" }]);
   advance(10000);
   engine.snapshot();
-  assert.deepEqual(engine.consumeEvents(), ["transition"]);
+  assert.deepEqual(engine.consumeEvents(), [{ type: "transition" }]);
   advance(3000);
   assert.equal(engine.snapshot().currentStepIndex, 1);
 
   engine.done();
-  assert.deepEqual(engine.consumeEvents(), ["transition"]);
+  assert.deepEqual(engine.consumeEvents(), [
+    { type: "transition" },
+    { type: "narrate", label: "Rest" },
+  ]);
   assert.equal(engine.snapshot().currentStepIndex, 2);
   assert.equal(engine.snapshot().currentStep.type, "time");
 });
@@ -62,7 +65,10 @@ test("delayed updates can transition through multiple timed steps", () => {
   engine.consumeEvents();
   advance(16000);
   assert.equal(engine.snapshot().status, TIMER_STATES.COMPLETED);
-  assert.deepEqual(engine.consumeEvents(), ["transition", "complete"]);
+  assert.deepEqual(engine.consumeEvents(), [
+    { type: "transition" },
+    { type: "complete" },
+  ]);
 });
 
 test("elapsed workout time pauses and resumes accurately", () => {
@@ -103,4 +109,54 @@ test("done on the final rep step completes the workout", () => {
   engine.consumeEvents();
   engine.done();
   assert.equal(engine.snapshot().status, TIMER_STATES.COMPLETED);
+});
+
+test("narrates once when a timed step crosses the three-second threshold", () => {
+  const { engine, advance } = setup();
+
+  engine.start();
+  engine.consumeEvents();
+  advance(6500);
+  engine.snapshot();
+  assert.deepEqual(engine.consumeEvents(), []);
+
+  advance(1000);
+  engine.snapshot();
+  assert.deepEqual(engine.consumeEvents(), [{ type: "narrate", label: "Push-ups" }]);
+  engine.snapshot();
+  assert.deepEqual(engine.consumeEvents(), []);
+});
+
+test("does not narrate a final or very short timed step", () => {
+  const short = setup([
+    { type: "time", value: 2, label: "Short" },
+    { type: "reps", value: 2, label: "Next" },
+  ]).engine;
+  short.start();
+  short.consumeEvents();
+  assert.deepEqual(short.consumeEvents(), []);
+
+  const final = setup([{ type: "time", value: 10, label: "Final" }]).engine;
+  final.start();
+  final.consumeEvents();
+  assert.deepEqual(final.consumeEvents(), []);
+});
+
+test("does not narrate while paused, then narrates after resume if due", () => {
+  const { engine, advance } = setup();
+
+  engine.start();
+  engine.consumeEvents();
+  advance(8000);
+  engine.pause();
+  assert.deepEqual(engine.consumeEvents(), []);
+  advance(5000);
+  engine.snapshot();
+  assert.deepEqual(engine.consumeEvents(), []);
+
+  engine.resume();
+  assert.deepEqual(engine.consumeEvents(), [{ type: "narrate", label: "Push-ups" }]);
+  advance(1000);
+  engine.snapshot();
+  assert.deepEqual(engine.consumeEvents(), []);
 });

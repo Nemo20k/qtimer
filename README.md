@@ -37,6 +37,8 @@ http://localhost:5173/?title=Tabata&step=time:20:Work&step=time:10:Rest&step=tim
 
 The URL is the source of truth. qtimer does not use accounts, persistence, cookies, backend services, analytics, or external APIs. Sound cues use the browser's native Web Audio API and are enabled by default on the ready screen; sound is not stored.
 
+When voice cues are enabled, pressing `START` announces the first step and shows a three-second get-ready countdown before the workout clock begins.
+
 ## Project structure
 
 - `src/parser.js` parses and validates the MVP v2 URL format.

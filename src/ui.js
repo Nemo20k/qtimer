@@ -1,5 +1,5 @@
 import { TIMER_STATES } from "./timer-engine.js";
-import { initAudio, playBeep, playCompletionBeep } from "./audio.js";
+import { cancelSpeech, initAudio, playBeep, playCompletionBeep, speakLabel } from "./audio.js";
 
 const RING_RADIUS = 138;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
@@ -37,7 +37,17 @@ export function mountApp(root, { title, steps }, engine) {
             <input class="sound-checkbox" type="checkbox" checked />
             <span>Sound: On</span>
           </label>
+          <label class="sound-toggle">
+            <input class="voice-checkbox" type="checkbox" checked />
+            <span>Voice cues: On</span>
+          </label>
           <button class="primary-button start-button" type="button">START</button>
+        </div>
+
+        <div class="prestart-view" hidden>
+          <p class="eyebrow">GET READY</p>
+          <p class="prestart-label"></p>
+          <p class="prestart-countdown">3</p>
         </div>
 
         <div class="running-view">
@@ -89,6 +99,7 @@ export function mountApp(root, { title, steps }, engine) {
   const workoutArea = root.querySelector(".workout-area");
   const titleElement = root.querySelector("#workout-title");
   const readyView = root.querySelector(".ready-view");
+  const prestartView = root.querySelector(".prestart-view");
   const runningView = root.querySelector(".running-view");
   const pausedView = root.querySelector(".paused-view");
   const completedView = root.querySelector(".completed-view");
@@ -107,7 +118,12 @@ export function mountApp(root, { title, steps }, engine) {
   const statusText = root.querySelector(".state-label");
   const soundCheckbox = root.querySelector(".sound-checkbox");
   const soundText = root.querySelector(".sound-toggle span");
+  const voiceCheckbox = root.querySelector(".voice-checkbox");
+  const voiceText = root.querySelectorAll(".sound-toggle span")[1];
   let animationFrame = null;
+  let prestartFrame = null;
+  let prestartStartedAt = null;
+  const PRESTART_DURATION_MS = 3000;
 
   titleElement.textContent = title;
   titleElement.hidden = !title;
@@ -126,11 +142,14 @@ export function mountApp(root, { title, steps }, engine) {
     const isRunningOrPaused = snapshot.status === TIMER_STATES.RUNNING || snapshot.status === TIMER_STATES.PAUSED;
     const isTimeStep = snapshot.currentStep.type === "time";
 
-    processAudioEvents(engine.consumeEvents());
+    const events = engine.consumeEvents();
+    processAudioEvents(events);
+    processNarrationEvents(events);
 
     appShell.dataset.state = snapshot.status.toLowerCase();
     statusText.textContent = snapshot.status === TIMER_STATES.PAUSED ? "PAUSED" : "COMPLETE";
-    setHidden(readyView, snapshot.status !== TIMER_STATES.READY);
+    setHidden(readyView, snapshot.status !== TIMER_STATES.READY || prestartStartedAt !== null);
+    setHidden(prestartView, prestartStartedAt === null);
     setHidden(runningView, snapshot.status !== TIMER_STATES.RUNNING);
     setHidden(pausedView, snapshot.status !== TIMER_STATES.PAUSED);
     setHidden(completedView, snapshot.status !== TIMER_STATES.COMPLETED);
@@ -169,23 +188,69 @@ export function mountApp(root, { title, steps }, engine) {
     render(performance.now());
   }
 
+  function stopPrestartCountdown() {
+    if (prestartFrame !== null) {
+      cancelAnimationFrame(prestartFrame);
+      prestartFrame = null;
+    }
+    prestartStartedAt = null;
+  }
+
+  function runPrestartCountdown(now) {
+    if (prestartStartedAt === null) return;
+
+    const elapsed = now - prestartStartedAt;
+    const secondsRemaining = Math.max(1, 3 - Math.floor(elapsed / 1000));
+    root.querySelector(".prestart-countdown").textContent = secondsRemaining;
+
+    if (elapsed >= PRESTART_DURATION_MS) {
+      stopPrestartCountdown();
+      engine.start();
+      const events = engine.consumeEvents();
+      processAudioEvents(events);
+      processNarrationEvents(events);
+      refresh();
+      return;
+    }
+
+    prestartFrame = requestAnimationFrame(runPrestartCountdown);
+  }
+
   function processAudioEvents(events) {
     if (!soundCheckbox.checked) return;
     for (const event of events) {
       if (event === "complete") playCompletionBeep();
       else if (event === "start" || event === "transition") playBeep();
+      else if (event.type === "complete") playCompletionBeep();
+      else if (event.type === "start" || event.type === "transition") playBeep();
     }
   }
 
-  root.querySelector(".start-button").addEventListener("click", async () => {
-    if (soundCheckbox.checked) await initAudio();
-    engine.start();
-    processAudioEvents(engine.consumeEvents());
+  function processNarrationEvents(events) {
+    if (!voiceCheckbox.checked) return;
+    for (const event of events) {
+      if (event.type === "narrate") speakLabel(event.label);
+    }
+  }
+
+  root.querySelector(".start-button").addEventListener("click", () => {
+    if (prestartStartedAt !== null) return;
+    if (soundCheckbox.checked) void initAudio();
+    if (voiceCheckbox.checked) speakLabel(steps[0].label);
+    prestartStartedAt = performance.now();
+    root.querySelector(".prestart-label").textContent = steps[0].label;
+    root.querySelector(".prestart-countdown").textContent = "3";
     refresh();
+    prestartFrame = requestAnimationFrame(runPrestartCountdown);
   });
 
   soundCheckbox.addEventListener("change", () => {
     soundText.textContent = `Sound: ${soundCheckbox.checked ? "On" : "Off"}`;
+  });
+
+  voiceCheckbox.addEventListener("change", () => {
+    voiceText.textContent = `Voice cues: ${voiceCheckbox.checked ? "On" : "Off"}`;
+    if (!voiceCheckbox.checked) cancelSpeech();
   });
 
   root.querySelector(".done-button").addEventListener("click", (event) => {
@@ -201,6 +266,7 @@ export function mountApp(root, { title, steps }, engine) {
 
   for (const restartButton of root.querySelectorAll(".paused-restart-button, .completed-restart-button")) {
     restartButton.addEventListener("click", () => {
+      cancelSpeech();
       engine.restart();
       refresh();
     });
@@ -224,6 +290,7 @@ export function mountApp(root, { title, steps }, engine) {
     }
 
     if (event.key.toLowerCase() === "r" && (engine.status === TIMER_STATES.PAUSED || engine.status === TIMER_STATES.COMPLETED)) {
+      cancelSpeech();
       engine.restart();
       refresh();
     }

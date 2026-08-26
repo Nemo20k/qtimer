@@ -61,3 +61,27 @@ export function playCompletionBeep() {
     console.warn("qtimer could not play the completion sound.", error);
   }
 }
+
+export function speakLabel(label) {
+  try {
+    if (!("speechSynthesis" in globalThis) || typeof globalThis.SpeechSynthesisUtterance !== "function") {
+      return;
+    }
+
+    globalThis.speechSynthesis.cancel();
+    const utterance = new globalThis.SpeechSynthesisUtterance(`Next, ${label}`);
+    utterance.rate = 0.8;
+    utterance.volume = 1;
+    globalThis.speechSynthesis.speak(utterance);
+  } catch (error) {
+    console.warn("qtimer voice cues are unavailable.", error);
+  }
+}
+
+export function cancelSpeech() {
+  try {
+    globalThis.speechSynthesis?.cancel();
+  } catch (error) {
+    console.warn("qtimer could not cancel voice cues.", error);
+  }
+}
