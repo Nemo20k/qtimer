@@ -20,6 +20,7 @@ body,
 body {
   min-width: 320px;
   background: #101214;
+  overflow: hidden;
 }
 
 button {
@@ -50,8 +51,26 @@ button:focus-visible {
 .app-shell {
   display: flex;
   flex-direction: column;
+  height: 100dvh;
   min-height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
   padding: max(1.2rem, env(safe-area-inset-top)) max(1.25rem, env(safe-area-inset-right)) max(1.2rem, env(safe-area-inset-bottom)) max(1.25rem, env(safe-area-inset-left));
+}
+
+.app-layout {
+  display: flex;
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.timer-panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
 }
 
 .workout-header {
@@ -103,6 +122,100 @@ p {
   min-height: 0;
   position: relative;
   text-align: center;
+}
+
+.workout-sidebar {
+  border-right: 1px solid #272d32;
+  display: flex;
+  flex: 0 0 28%;
+  flex-direction: column;
+  margin: 1.5rem 0;
+  min-width: 16rem;
+  order: -1;
+  padding: 1rem 1.5rem 1rem 0;
+}
+
+.list-heading,
+.overlay-header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.sidebar-progress,
+.overlay-progress {
+  color: #8c949d;
+  font-size: 0.8rem;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+.workout-list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.25rem;
+  list-style: none;
+  margin: 1rem 0 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 0.5rem 0 0;
+  scrollbar-color: #3b434b transparent;
+}
+
+.step-row {
+  align-items: baseline;
+  border-radius: 0.6rem;
+  color: #9ba3ab;
+  display: grid;
+  gap: 0.55rem;
+  grid-template-columns: 1.1rem 3.2rem minmax(0, 1fr);
+  line-height: 1.25;
+  padding: 0.65rem 0.55rem;
+}
+
+.step-marker {
+  color: #707981;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.step-amount {
+  color: #b5bbc1;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.step-label {
+  overflow-wrap: anywhere;
+}
+
+.step-completed {
+  color: #68717a;
+}
+
+.step-completed .step-marker {
+  color: #7e8790;
+}
+
+.step-current {
+  background: #252a2f;
+  color: #ffffff;
+  font-weight: 700;
+}
+
+.step-current .step-marker {
+  color: #f5c451;
+}
+
+.step-current .step-amount {
+  color: #f5c451;
+}
+
+.mobile-list-button,
+.workout-overlay {
+  display: none;
 }
 
 .ready-view,
@@ -393,6 +506,69 @@ code {
   .app-shell {
     padding-left: 2.5rem;
     padding-right: 2.5rem;
+  }
+}
+
+@media (max-width: 699px) {
+  .app-layout {
+    display: block;
+  }
+
+  .workout-sidebar {
+    display: none;
+  }
+
+  .mobile-list-button {
+    background: transparent;
+    border: 1px solid #333a41;
+    color: #b5bbc1;
+    display: block;
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+    margin: 0 auto 0.25rem;
+    min-height: 42px;
+    padding: 0 1rem;
+  }
+
+  .mobile-list-button:hover {
+    background: #252a2f;
+  }
+
+  .workout-overlay:not([hidden]) {
+    align-items: flex-end;
+    background: rgba(0, 0, 0, 0.68);
+    display: flex;
+    inset: 0;
+    position: fixed;
+    z-index: 10;
+  }
+
+  .overlay-panel {
+    background: #101214;
+    border-top: 1px solid #3b434b;
+    border-radius: 1.1rem 1.1rem 0 0;
+    display: flex;
+    flex-direction: column;
+    max-height: 82dvh;
+    padding: 1.25rem max(1rem, env(safe-area-inset-right)) max(1.25rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+    width: 100%;
+  }
+
+  .overlay-header {
+    flex: 0 0 auto;
+  }
+
+  .overlay-close {
+    background: transparent;
+    color: #f4f5f6;
+    font-size: 1.8rem;
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0;
+  }
+
+  .overlay-panel .workout-list {
+    max-height: 65dvh;
   }
 }
 

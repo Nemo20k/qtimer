@@ -23,12 +23,14 @@ function setHidden(element, hidden) {
 export function mountApp(root, { title, steps }, engine) {
   root.innerHTML = `
     <main class="app-shell" aria-label="qtimer">
-      <header class="workout-header">
-        <p class="brand">qtimer</p>
-        <h1 id="workout-title"></h1>
-      </header>
+      <div class="app-layout">
+        <div class="timer-panel">
+          <header class="workout-header">
+            <p class="brand">qtimer</p>
+            <h1 id="workout-title"></h1>
+          </header>
 
-      <section class="workout-area" aria-label="Timer controls">
+          <section class="workout-area" aria-label="Timer controls">
         <div class="ready-view">
           <p class="eyebrow">READY TO BEGIN</p>
           <p class="ready-steps"></p>
@@ -87,11 +89,35 @@ export function mountApp(root, { title, steps }, engine) {
           <p class="completed-summary"></p>
           <button class="primary-button completed-restart-button" type="button">RESTART</button>
         </div>
-      </section>
+          </section>
 
-      <footer class="workout-footer">
-        <p class="workout-elapsed"></p>
-      </footer>
+          <footer class="workout-footer">
+            <p class="workout-elapsed"></p>
+          </footer>
+          <button class="mobile-list-button" type="button"></button>
+        </div>
+
+        <aside class="workout-sidebar" aria-label="Workout steps">
+          <div class="list-heading">
+            <p class="eyebrow">WORKOUT</p>
+            <p class="sidebar-progress"></p>
+          </div>
+          <ol class="workout-list"></ol>
+        </aside>
+      </div>
+
+      <div class="workout-overlay" hidden>
+        <div class="overlay-panel" role="dialog" aria-modal="true" aria-label="Workout steps">
+          <div class="overlay-header">
+            <div>
+              <p class="eyebrow">WORKOUT</p>
+              <p class="overlay-progress"></p>
+            </div>
+            <button class="overlay-close" type="button" aria-label="Close workout steps">×</button>
+          </div>
+          <ol class="workout-list"></ol>
+        </div>
+      </div>
     </main>
   `;
 
@@ -116,11 +142,17 @@ export function mountApp(root, { title, steps }, engine) {
   const pausedReps = root.querySelector(".paused-reps");
   const completedSummary = root.querySelector(".completed-summary");
   const statusText = root.querySelector(".state-label");
+  const listContainers = root.querySelectorAll(".workout-list");
+  const sidebarProgress = root.querySelector(".sidebar-progress");
+  const overlayProgress = root.querySelector(".overlay-progress");
+  const mobileListButton = root.querySelector(".mobile-list-button");
+  const workoutOverlay = root.querySelector(".workout-overlay");
   const soundCheckbox = root.querySelector(".sound-checkbox");
   const soundText = root.querySelector(".sound-toggle span");
   const voiceCheckbox = root.querySelector(".voice-checkbox");
   const voiceText = root.querySelectorAll(".sound-toggle span")[1];
   let animationFrame = null;
+  let lastRenderedStepIndex = null;
   let prestartFrame = null;
   let prestartStartedAt = null;
   const PRESTART_DURATION_MS = 3000;
@@ -137,6 +169,66 @@ export function mountApp(root, { title, steps }, engine) {
     }
   }
 
+  function formatStepAmount(step) {
+    if (step.type === "reps") return String(step.value);
+
+    const totalSeconds = Math.ceil(step.value);
+    if (totalSeconds < 60) return `${totalSeconds}s`;
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    const pad = (value) => String(value).padStart(2, "0");
+    return hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${minutes}:${pad(seconds)}`;
+  }
+
+  function renderStepLists(snapshot) {
+    const isCompleted = snapshot.status === TIMER_STATES.COMPLETED;
+    const progressText = isCompleted
+      ? `${steps.length} / ${steps.length}`
+      : `${snapshot.currentStepNumber} / ${snapshot.totalSteps}`;
+    sidebarProgress.textContent = progressText;
+    overlayProgress.textContent = progressText;
+
+    for (const list of listContainers) {
+      list.replaceChildren();
+      steps.forEach((step, index) => {
+        const row = document.createElement("li");
+        const state = isCompleted || index < snapshot.currentStepIndex
+          ? "completed"
+          : index === snapshot.currentStepIndex
+            ? "current"
+            : "upcoming";
+        row.className = `step-row step-${state}`;
+        if (state === "current") row.setAttribute("aria-current", "step");
+
+        const marker = document.createElement("span");
+        marker.className = "step-marker";
+        marker.setAttribute("aria-hidden", "true");
+        marker.textContent = state === "completed" ? "✓" : state === "current" ? "●" : "";
+
+        const amount = document.createElement("span");
+        amount.className = "step-amount";
+        amount.textContent = formatStepAmount(step);
+
+        const label = document.createElement("span");
+        label.className = "step-label";
+        label.textContent = step.label;
+
+        row.append(marker, amount, label);
+        list.append(row);
+      });
+    }
+
+    if (lastRenderedStepIndex !== snapshot.currentStepIndex || isCompleted) {
+      lastRenderedStepIndex = snapshot.currentStepIndex;
+      const behavior = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+      for (const list of listContainers) {
+        const activeRow = list.querySelector(isCompleted ? ".step-row:last-child" : ".step-current");
+        activeRow?.scrollIntoView({ block: "center", behavior });
+      }
+    }
+  }
+
   function render(now) {
     const snapshot = engine.snapshot(now);
     const isRunningOrPaused = snapshot.status === TIMER_STATES.RUNNING || snapshot.status === TIMER_STATES.PAUSED;
@@ -145,6 +237,7 @@ export function mountApp(root, { title, steps }, engine) {
     const events = engine.consumeEvents();
     processAudioEvents(events);
     processNarrationEvents(events);
+    renderStepLists(snapshot);
 
     appShell.dataset.state = snapshot.status.toLowerCase();
     statusText.textContent = snapshot.status === TIMER_STATES.PAUSED ? "PAUSED" : "COMPLETE";
@@ -154,6 +247,7 @@ export function mountApp(root, { title, steps }, engine) {
     setHidden(pausedView, snapshot.status !== TIMER_STATES.PAUSED);
     setHidden(completedView, snapshot.status !== TIMER_STATES.COMPLETED);
     setHidden(workoutElapsed, snapshot.status === TIMER_STATES.READY);
+    mobileListButton.textContent = `${snapshot.currentStepNumber} / ${snapshot.totalSteps} · View workout`;
 
     if (isRunningOrPaused) {
       runningPeriodCount.textContent = `${snapshot.currentStepNumber} / ${snapshot.totalSteps}`;
@@ -242,6 +336,17 @@ export function mountApp(root, { title, steps }, engine) {
     root.querySelector(".prestart-countdown").textContent = "3";
     refresh();
     prestartFrame = requestAnimationFrame(runPrestartCountdown);
+  });
+
+  mobileListButton.addEventListener("click", () => {
+    workoutOverlay.hidden = false;
+    workoutOverlay.dataset.open = "true";
+    render(performance.now());
+  });
+
+  root.querySelector(".overlay-close").addEventListener("click", () => {
+    workoutOverlay.hidden = true;
+    delete workoutOverlay.dataset.open;
   });
 
   soundCheckbox.addEventListener("change", () => {
