@@ -23,6 +23,7 @@ test("starts ready and automatically transitions timed steps", () => {
 
   assert.equal(engine.snapshot().status, TIMER_STATES.READY);
   engine.start();
+  assert.deepEqual(engine.consumeEvents(), ["start"]);
   advance(10000);
 
   const snapshot = engine.snapshot();
@@ -30,18 +31,23 @@ test("starts ready and automatically transitions timed steps", () => {
   assert.equal(snapshot.currentStepIndex, 1);
   assert.equal(snapshot.currentStep.type, "reps");
   assert.equal(snapshot.workoutElapsedMs, 10000);
+  assert.deepEqual(engine.consumeEvents(), ["transition"]);
+  assert.deepEqual(engine.consumeEvents(), []);
 });
 
 test("rep steps advance only through done", () => {
   const { engine, advance } = setup();
 
   engine.start();
+  assert.deepEqual(engine.consumeEvents(), ["start"]);
   advance(10000);
   engine.snapshot();
+  assert.deepEqual(engine.consumeEvents(), ["transition"]);
   advance(3000);
   assert.equal(engine.snapshot().currentStepIndex, 1);
 
   engine.done();
+  assert.deepEqual(engine.consumeEvents(), ["transition"]);
   assert.equal(engine.snapshot().currentStepIndex, 2);
   assert.equal(engine.snapshot().currentStep.type, "time");
 });
@@ -53,14 +59,17 @@ test("delayed updates can transition through multiple timed steps", () => {
   ]);
 
   engine.start();
+  engine.consumeEvents();
   advance(16000);
   assert.equal(engine.snapshot().status, TIMER_STATES.COMPLETED);
+  assert.deepEqual(engine.consumeEvents(), ["transition", "complete"]);
 });
 
 test("elapsed workout time pauses and resumes accurately", () => {
   const { engine, advance } = setup();
 
   engine.start();
+  engine.consumeEvents();
   advance(3500);
   engine.pause();
   advance(5000);
@@ -76,6 +85,7 @@ test("restart returns to step one and resets elapsed time", () => {
   const { engine, advance } = setup();
 
   engine.start();
+  engine.consumeEvents();
   advance(12000);
   engine.done();
   engine.restart();
@@ -90,6 +100,7 @@ test("done on the final rep step completes the workout", () => {
   const { engine } = setup([{ type: "reps", value: 6, label: "Push-ups" }]);
 
   engine.start();
+  engine.consumeEvents();
   engine.done();
   assert.equal(engine.snapshot().status, TIMER_STATES.COMPLETED);
 });

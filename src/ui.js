@@ -1,4 +1,5 @@
 import { TIMER_STATES } from "./timer-engine.js";
+import { initAudio, playBeep, playCompletionBeep } from "./audio.js";
 
 const RING_RADIUS = 138;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
@@ -32,6 +33,10 @@ export function mountApp(root, { title, steps }, engine) {
           <p class="eyebrow">READY TO BEGIN</p>
           <p class="ready-steps"></p>
           <p class="ready-first-label"></p>
+          <label class="sound-toggle">
+            <input class="sound-checkbox" type="checkbox" checked />
+            <span>Sound: On</span>
+          </label>
           <button class="primary-button start-button" type="button">START</button>
         </div>
 
@@ -100,6 +105,8 @@ export function mountApp(root, { title, steps }, engine) {
   const pausedReps = root.querySelector(".paused-reps");
   const completedSummary = root.querySelector(".completed-summary");
   const statusText = root.querySelector(".state-label");
+  const soundCheckbox = root.querySelector(".sound-checkbox");
+  const soundText = root.querySelector(".sound-toggle span");
   let animationFrame = null;
 
   titleElement.textContent = title;
@@ -118,6 +125,8 @@ export function mountApp(root, { title, steps }, engine) {
     const snapshot = engine.snapshot(now);
     const isRunningOrPaused = snapshot.status === TIMER_STATES.RUNNING || snapshot.status === TIMER_STATES.PAUSED;
     const isTimeStep = snapshot.currentStep.type === "time";
+
+    processAudioEvents(engine.consumeEvents());
 
     appShell.dataset.state = snapshot.status.toLowerCase();
     statusText.textContent = snapshot.status === TIMER_STATES.PAUSED ? "PAUSED" : "COMPLETE";
@@ -160,9 +169,23 @@ export function mountApp(root, { title, steps }, engine) {
     render(performance.now());
   }
 
-  root.querySelector(".start-button").addEventListener("click", () => {
+  function processAudioEvents(events) {
+    if (!soundCheckbox.checked) return;
+    for (const event of events) {
+      if (event === "complete") playCompletionBeep();
+      else if (event === "start" || event === "transition") playBeep();
+    }
+  }
+
+  root.querySelector(".start-button").addEventListener("click", async () => {
+    if (soundCheckbox.checked) await initAudio();
     engine.start();
+    processAudioEvents(engine.consumeEvents());
     refresh();
+  });
+
+  soundCheckbox.addEventListener("change", () => {
+    soundText.textContent = `Sound: ${soundCheckbox.checked ? "On" : "Off"}`;
   });
 
   root.querySelector(".done-button").addEventListener("click", (event) => {

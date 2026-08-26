@@ -18,12 +18,14 @@ export class TimerEngine {
     this.currentElapsedMs = 0;
     this.workoutElapsedMs = 0;
     this.periodStartedAt = null;
+    this.pendingEvents = [];
   }
 
   start() {
     if (this.status !== TIMER_STATES.READY) return;
     this.status = TIMER_STATES.RUNNING;
     this.periodStartedAt = this.clock();
+    this.pendingEvents.push("start");
   }
 
   pause() {
@@ -47,6 +49,7 @@ export class TimerEngine {
     this.currentElapsedMs = 0;
     this.workoutElapsedMs = 0;
     this.periodStartedAt = null;
+    this.pendingEvents = [];
   }
 
   done() {
@@ -89,11 +92,19 @@ export class TimerEngine {
       this.status = TIMER_STATES.COMPLETED;
       this.currentElapsedMs = 0;
       this.periodStartedAt = null;
+      this.pendingEvents.push("complete");
       return;
     }
 
     this.currentStepIndex += 1;
     this.currentElapsedMs = 0;
+    this.pendingEvents.push("transition");
+  }
+
+  consumeEvents() {
+    const events = this.pendingEvents;
+    this.pendingEvents = [];
+    return events;
   }
 
   snapshot(now = this.clock()) {

@@ -35,12 +35,13 @@ http://localhost:5173/?title=Push+Workout&step=reps:6:Push-ups&step=time:50:Rest
 http://localhost:5173/?title=Tabata&step=time:20:Work&step=time:10:Rest&step=time:20:Work&step=time:10:Rest
 ```
 
-The URL is the source of truth. qtimer does not use accounts, persistence, cookies, backend services, sound, analytics, or external APIs.
+The URL is the source of truth. qtimer does not use accounts, persistence, cookies, backend services, analytics, or external APIs. Sound cues use the browser's native Web Audio API and are enabled by default on the ready screen; sound is not stored.
 
 ## Project structure
 
 - `src/parser.js` parses and validates the MVP v2 URL format.
 - `src/timer-engine.js` contains timestamp-based timer state and calculations.
+- `src/audio.js` generates optional start, transition, and completion beeps.
 - `src/ui.js` renders the application and handles interactions.
 - `src/styles.css` contains the responsive, fullscreen-oriented styling.
 - `test/` contains parser and timer-engine tests.
