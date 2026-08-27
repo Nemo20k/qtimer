@@ -69,6 +69,10 @@ export function mountApp(root, { title, steps }, engine) {
             <p class="rep-unit">REPS</p>
             <button class="primary-button done-button" type="button">DONE</button>
           </div>
+          <nav class="step-navigation" aria-label="Step navigation">
+            <button class="secondary-button previous-button" type="button" aria-label="Previous step"><span class="nav-arrow" aria-hidden="true">←</span><span class="nav-text"> Previous</span></button>
+            <button class="secondary-button next-button" type="button" aria-label="Next step"><span class="nav-text">Next </span><span class="nav-arrow" aria-hidden="true">→</span></button>
+          </nav>
           <p class="tap-hint">Tap anywhere to pause</p>
         </div>
 
@@ -77,6 +81,10 @@ export function mountApp(root, { title, steps }, engine) {
           <p class="paused-label"></p>
           <p class="paused-countdown"></p>
           <p class="paused-reps"></p>
+          <nav class="step-navigation" aria-label="Step navigation">
+            <button class="secondary-button previous-button" type="button" aria-label="Previous step"><span class="nav-arrow" aria-hidden="true">←</span><span class="nav-text"> Previous</span></button>
+            <button class="secondary-button next-button" type="button" aria-label="Next step"><span class="nav-text">Next </span><span class="nav-arrow" aria-hidden="true">→</span></button>
+          </nav>
           <div class="button-row">
             <button class="primary-button resume-button" type="button">RESUME</button>
             <button class="secondary-button paused-restart-button" type="button">RESTART</button>
@@ -90,10 +98,6 @@ export function mountApp(root, { title, steps }, engine) {
           <button class="primary-button completed-restart-button" type="button">RESTART</button>
         </div>
 
-        <nav class="step-navigation" aria-label="Step navigation" hidden>
-          <button class="secondary-button previous-button" type="button">← Previous</button>
-          <button class="secondary-button next-button" type="button">Next →</button>
-        </nav>
       </section>
 
           <footer class="workout-footer">
@@ -134,9 +138,9 @@ export function mountApp(root, { title, steps }, engine) {
   const runningView = root.querySelector(".running-view");
   const pausedView = root.querySelector(".paused-view");
   const completedView = root.querySelector(".completed-view");
-  const stepNavigation = root.querySelector(".step-navigation");
-  const previousButton = root.querySelector(".previous-button");
-  const nextButton = root.querySelector(".next-button");
+  const stepNavigations = root.querySelectorAll(".step-navigation");
+  const previousButtons = root.querySelectorAll(".previous-button");
+  const nextButtons = root.querySelectorAll(".next-button");
   const timeStepView = root.querySelector(".time-step-view");
   const repStepView = root.querySelector(".rep-step-view");
   const runningPeriodCount = root.querySelector(".period-count");
@@ -254,8 +258,12 @@ export function mountApp(root, { title, steps }, engine) {
     setHidden(runningView, snapshot.status !== TIMER_STATES.RUNNING);
     setHidden(pausedView, snapshot.status !== TIMER_STATES.PAUSED);
     setHidden(completedView, snapshot.status !== TIMER_STATES.COMPLETED);
-    setHidden(stepNavigation, snapshot.status !== TIMER_STATES.RUNNING && snapshot.status !== TIMER_STATES.PAUSED);
-    previousButton.disabled = snapshot.currentStepIndex === 0;
+    for (const navigation of stepNavigations) {
+      setHidden(navigation, navigation.closest(".running-view")
+        ? snapshot.status !== TIMER_STATES.RUNNING
+        : snapshot.status !== TIMER_STATES.PAUSED);
+    }
+    for (const button of previousButtons) button.disabled = snapshot.currentStepIndex === 0;
     setHidden(workoutElapsed, snapshot.status === TIMER_STATES.READY);
     mobileListButton.textContent = `${snapshot.currentStepNumber} / ${snapshot.totalSteps} · View workout`;
 
@@ -374,19 +382,23 @@ export function mountApp(root, { title, steps }, engine) {
     refresh();
   });
 
-  previousButton.addEventListener("click", (event) => {
-    event.stopPropagation();
-    cancelSpeech();
-    engine.goToPreviousStep();
-    refresh();
-  });
+  for (const button of previousButtons) {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      cancelSpeech();
+      engine.goToPreviousStep();
+      refresh();
+    });
+  }
 
-  nextButton.addEventListener("click", (event) => {
-    event.stopPropagation();
-    cancelSpeech();
-    engine.goToNextStep();
-    refresh();
-  });
+  for (const button of nextButtons) {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      cancelSpeech();
+      engine.goToNextStep();
+      refresh();
+    });
+  }
 
   root.querySelector(".resume-button").addEventListener("click", () => {
     engine.resume();
