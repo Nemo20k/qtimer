@@ -55,20 +55,20 @@ export function mountApp(root, { title, steps }, engine) {
         <div class="running-view">
           <div class="period-count" aria-live="polite"></div>
           <p class="current-label"></p>
-          <div class="time-step-view">
+          <div class="main-display">
             <div class="countdown-wrap">
               <svg class="progress-ring" viewBox="0 0 320 320" aria-hidden="true">
                 <circle class="ring-track" cx="160" cy="160" r="${RING_RADIUS}"></circle>
                 <circle class="ring-progress" cx="160" cy="160" r="${RING_RADIUS}"></circle>
               </svg>
-              <p class="countdown" aria-label="Current timer remaining"></p>
+            </div>
+            <div class="time-step-view"><p class="countdown" aria-label="Current timer remaining"></p></div>
+            <div class="rep-step-view">
+              <p class="rep-count"></p>
+              <p class="rep-unit">REPS</p>
             </div>
           </div>
-          <div class="rep-step-view">
-            <p class="rep-count"></p>
-            <p class="rep-unit">REPS</p>
-            <button class="primary-button done-button" type="button">DONE</button>
-          </div>
+          <div class="done-slot"><button class="primary-button done-button" type="button">DONE</button></div>
           <nav class="step-navigation" aria-label="Step navigation">
             <button class="secondary-button previous-button" type="button" aria-label="Previous step"><span class="nav-arrow" aria-hidden="true">←</span><span class="nav-text"> Previous</span></button>
             <button class="secondary-button next-button" type="button" aria-label="Next step"><span class="nav-text">Next </span><span class="nav-arrow" aria-hidden="true">→</span></button>
@@ -148,6 +148,7 @@ export function mountApp(root, { title, steps }, engine) {
   const countdown = root.querySelector(".countdown");
   const ringProgress = root.querySelector(".ring-progress");
   const repCount = root.querySelector(".rep-count");
+  const doneButton = root.querySelector(".done-button");
   const workoutElapsed = root.querySelector(".workout-elapsed");
   const pausedLabel = root.querySelector(".paused-label");
   const pausedCountdown = root.querySelector(".paused-countdown");
@@ -272,6 +273,7 @@ export function mountApp(root, { title, steps }, engine) {
       currentLabel.textContent = snapshot.currentStep.label;
       timeStepView.hidden = !isTimeStep;
       repStepView.hidden = isTimeStep;
+      doneButton.classList.toggle("is-hidden", isTimeStep);
       countdown.textContent = formatDuration(snapshot.currentRemainingMs ?? 0);
       countdown.setAttribute("aria-label", `${formatDuration(snapshot.currentRemainingMs ?? 0)} remaining`);
       repCount.textContent = snapshot.currentStep.value;
