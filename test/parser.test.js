@@ -2,40 +2,56 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { parseTimerUrl } from "../src/parser.js";
 
-test("parses repeated timed and rep steps in order", () => {
-  const result = parseTimerUrl("?title=Push+Workout&step=reps:6:Push-ups&step=time:50:Rest&step=reps:6:Push-ups");
+test("parses seconds, minutes, and reps", () => {
+  const result = parseTimerUrl("?title=Quick+Workout&30s=Push-ups&2m=Rest&8x=Squats");
 
   assert.equal(result.ok, true);
-  assert.equal(result.title, "Push Workout");
+  assert.equal(result.title, "Quick Workout");
   assert.deepEqual(result.steps, [
-    { type: "reps", value: 6, label: "Push-ups" },
-    { type: "time", value: 50, label: "Rest" },
-    { type: "reps", value: 6, label: "Push-ups" },
+    { type: "time", value: 30, label: "Push-ups" },
+    { type: "time", value: 120, label: "Rest" },
+    { type: "reps", value: 8, label: "Squats" },
   ]);
 });
 
-test("preserves colons and decodes arbitrary label text", () => {
-  const result = parseTimerUrl("?step=time:20:Kettlebell%20swings%3A%20fast%20round");
+test("preserves repeated keys and URL order", () => {
+  const result = parseTimerUrl("?30s=Push-ups&10s=Rest&30s=Squats&10s=Rest&10s=Rest&10s=Rest");
 
   assert.equal(result.ok, true);
-  assert.equal(result.steps[0].label, "Kettlebell swings: fast round");
+  assert.equal(result.steps.length, 6);
+  assert.deepEqual(result.steps.map(({ value, label }) => [value, label]), [
+    [30, "Push-ups"], [10, "Rest"], [30, "Squats"], [10, "Rest"], [10, "Rest"], [10, "Rest"],
+  ]);
 });
 
-test("rejects missing steps", () => {
-  const result = parseTimerUrl("?title=Missing");
+test("decodes labels containing spaces and colons", () => {
+  const result = parseTimerUrl("?10x=Reverse%20lunges%3A%20alternating");
 
-  assert.equal(result.ok, false);
-  assert.match(result.message, /at least one step/i);
+  assert.equal(result.ok, true);
+  assert.equal(result.steps[0].label, "Reverse lunges: alternating");
 });
 
-test("rejects unknown type, malformed value, zero, and negative values", () => {
-  assert.match(parseTimerUrl("?step=rounds:5:Work").message, /unknown type/i);
-  assert.match(parseTimerUrl("?step=time:nope:Work").message, /invalid numeric/i);
-  assert.match(parseTimerUrl("?step=reps:0:Push-ups").message, /greater than zero/i);
-  assert.match(parseTimerUrl("?step=time:-5:Rest").message, /greater than zero/i);
+test("ignores unknown metadata parameters", () => {
+  const result = parseTimerUrl("?title=Test&theme=dark&30s=Work");
+
+  assert.equal(result.ok, true);
+  assert.equal(result.steps.length, 1);
 });
 
-test("rejects missing labels and fractional reps", () => {
-  assert.match(parseTimerUrl("?step=time:20:").message, /label/i);
-  assert.match(parseTimerUrl("?step=reps:2.5:Push-ups").message, /whole number/i);
+test("rejects invalid new-format steps safely", () => {
+  assert.equal(parseTimerUrl("?0s=Rest").ok, false);
+  assert.equal(parseTimerUrl("?0x=Push-ups").ok, false);
+  assert.equal(parseTimerUrl("?-5s=Rest").ok, false);
+  assert.equal(parseTimerUrl("?10z=Squats").ok, false);
+  assert.equal(parseTimerUrl("?10s=").ok, false);
+});
+
+test("continues supporting the legacy step format", () => {
+  const result = parseTimerUrl("?step=reps:6:Push-ups&step=time:30:Rest");
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.steps, [
+    { type: "reps", value: 6, label: "Push-ups" },
+    { type: "time", value: 30, label: "Rest" },
+  ]);
 });

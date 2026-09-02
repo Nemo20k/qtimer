@@ -450,7 +450,7 @@ export function renderError(root, message) {
         <p class="eyebrow">UNABLE TO LOAD TIMER</p>
         <h1>There is a problem with this URL</h1>
         <p>${message}</p>
-        <p class="error-example">Try: <code>?step=time:20:Work&amp;step=time:10:Rest</code></p>
+      <p class="error-example">Try: <code>?20s=Work&amp;10s=Rest</code></p>
       </section>
     </main>
   `;

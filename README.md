@@ -11,28 +11,28 @@ npm run dev
 
 Then open the local URL printed by Vite.
 
-## URL format: MVP v2
+## URL format: MVP v3
 
-The current URL format is **MVP v2**. It replaces the old `timers=` format with repeated `step=` parameters:
+The current canonical URL format is **MVP v3**. Each workout step is a query parameter whose key contains its amount and unit:
 
 ```text
-?title=Optional%20Title&step=time:seconds:label&step=reps:count:label
+?title=Optional%20Title&30s=Work&2m=Rest&8x=Push-ups
 ```
 
-`title` is optional. At least one `step` is required. Step types are `time` and `reps`. Labels may contain URL-encoded text, including spaces and colons.
+Supported units are `s` for seconds, `m` for minutes, and `x` for repetitions. `title` is optional, and repeated keys remain ordered. Labels should be URL-encoded when necessary.
 
 Examples:
 
 ```text
-http://localhost:5173/?step=time:10:Work&step=time:5:Rest&step=time:10:Work
+http://localhost:5173/?30s=Work&10s=Rest&30s=Work&10s=Rest
 ```
 
 ```text
-http://localhost:5173/?title=Push+Workout&step=reps:6:Push-ups&step=time:50:Rest&step=reps:6:Push-ups&step=time:50:Rest
+http://localhost:5173/?title=Quick%20Workout&6x=Push-ups&50s=Rest&10x=Squats&1m=Rest
 ```
 
 ```text
-http://localhost:5173/?title=Tabata&step=time:20:Work&step=time:10:Rest&step=time:20:Work&step=time:10:Rest
+http://localhost:5173/?title=Tabata&20s=Work&10s=Rest&20s=Work&10s=Rest
 ```
 
 The URL is the source of truth. qtimer does not use accounts, persistence, cookies, backend services, analytics, or external APIs. Sound cues use the browser's native Web Audio API and are enabled by default on the ready screen; sound is not stored.
@@ -43,7 +43,7 @@ While running or paused, `← Previous` and `Next →` move between steps. Navig
 
 ## Project structure
 
-- `src/parser.js` parses and validates the MVP v2 URL format.
+- `src/parser.js` parses and validates the canonical MVP v3 URL format and legacy `step=` URLs.
 - `src/timer-engine.js` contains timestamp-based timer state and calculations.
 - `src/audio.js` generates optional start, transition, and completion beeps.
 - `src/ui.js` renders the application and handles interactions.
@@ -71,5 +71,5 @@ https://YOUR_USERNAME.github.io/qtimer/
 Timer URLs work by adding query parameters, for example:
 
 ```text
-https://YOUR_USERNAME.github.io/qtimer/?step=time:20:Work&step=time:10:Rest
+https://YOUR_USERNAME.github.io/qtimer/?title=Quick%20Workout&6x=Push-ups&30s=Rest&10x=Squats
 ```
