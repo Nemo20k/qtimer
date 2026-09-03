@@ -23,6 +23,10 @@ body {
   overflow: hidden;
 }
 
+body.landing-page {
+  overflow-y: auto;
+}
+
 button {
   border: 0;
   border-radius: 999px;
@@ -232,6 +236,53 @@ p {
 
 [hidden] {
   display: none !important;
+}
+
+.landing-shell {
+  min-height: 100dvh;
+  margin: 0 auto;
+  max-width: 42rem;
+  padding: clamp(2rem, 7vh, 5rem) 1.25rem 3rem;
+}
+
+.landing-header { text-align: center; }
+.landing-header h1 { font-size: clamp(2rem, 8vw, 3.5rem); letter-spacing: -0.05em; line-height: 1; margin: 1.5rem 0 0.8rem; }
+.landing-lede, .ai-section p { color: #8c949d; margin-bottom: 0; }
+.builder { margin-top: 2.5rem; }
+.field-label, .builder h2 { color: #b5bbc1; display: block; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.1em; margin-bottom: 0.65rem; text-transform: uppercase; }
+.builder h2 { margin-top: 2rem; }
+.builder-column-labels { color: #707981; display: grid; font-size: 0.68rem; font-weight: 800; grid-template-columns: 5.2rem 1fr 2.8rem; letter-spacing: 0.1em; margin-bottom: 0.35rem; text-transform: uppercase; }
+.builder-column-labels span:nth-child(2) { padding-left: 0.45rem; }
+.builder-column-labels span:nth-child(3) { padding-left: 0.45rem; }
+.text-input, .amount-input, .unit-input { background: #1b2024; border: 1px solid #343b42; border-radius: 0.65rem; color: #f4f5f6; font: inherit; min-height: 48px; padding: 0 0.8rem; width: 100%; }
+.text-input:focus, .amount-input:focus, .unit-input:focus { border-color: #f5c451; outline: 2px solid #f5c451; outline-offset: 1px; }
+.amount-input { appearance: textfield; }
+.amount-input::-webkit-inner-spin-button, .amount-input::-webkit-outer-spin-button { appearance: none; margin: 0; }
+.builder-rows { display: grid; gap: 0.65rem; }
+.builder-row { display: grid; gap: 0.45rem; }
+.row-controls { display: grid; grid-template-columns: 5.2rem 1fr 2.8rem; gap: 0.45rem; }
+.amount-input { text-align: center; }
+.remove-step-button { background: transparent; border: 1px solid #343b42; color: #9ba3ab; min-height: 48px; padding: 0; }
+.remove-step-button:disabled { cursor: not-allowed; opacity: 0.35; }
+.add-step-button, .copy-link-button, .copy-instructions-button { background: transparent; color: #f5c451; min-height: 44px; padding: 0; }
+.add-step-button { display: block; margin: 1rem auto; }
+.start-workout-button { display: block; margin: 1.5rem auto 0; min-width: 13rem; }
+.copy-link-button { display: block; font-size: 0.8rem; margin: 0.25rem auto; }
+.builder-error { color: #f29b8f; margin: 1rem 0 0; text-align: center; }
+.copy-feedback, .instructions-feedback { color: #aeb8a0; min-height: 1.2rem; text-align: center; }
+.ai-section { border-top: 1px solid #272d32; margin-top: 2.5rem; padding-top: 1.75rem; text-align: center; }
+.ai-section h2 { font-size: 1.05rem; margin-bottom: 0.55rem; }
+.copy-instructions-button { font-size: 0.8rem; margin-top: 0.8rem; }
+
+@media (min-width: 600px) {
+  .builder-column-labels { grid-template-columns: 5.2rem 7rem minmax(0, 1fr) 2.8rem; }
+  .builder-column-labels span:nth-child(3) { padding-left: 0; }
+  .builder-row { align-items: center; grid-template-columns: 5.2rem 7rem minmax(0, 1fr) 2.8rem; }
+  .row-controls { display: contents; }
+  .builder-row .label-input { grid-column: 3; grid-row: 1; }
+  .builder-row .remove-step-button { grid-column: 4; grid-row: 1; }
+  .builder-row .amount-input { grid-column: 1; grid-row: 1; }
+  .builder-row .unit-input { grid-column: 2; grid-row: 1; }
 }
 
 .ready-view {
