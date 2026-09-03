@@ -1,5 +1,3 @@
-import { parseTimerUrl } from "./parser.js";
-
 export const WORKOUT_LIMITS = {
   maxSteps: 200,
   maxTitleLength: 100,
@@ -8,7 +6,16 @@ export const WORKOUT_LIMITS = {
   maxReps: 10000,
 };
 
-const UNIT_TO_TYPE = { s: "time", m: "time", x: "reps" };
+export function validateStep(type, value, label, index) {
+  if (type !== "time" && type !== "reps") return `Step ${index} has an unknown type. Use seconds, minutes, or reps.`;
+  if (!Number.isInteger(value) || value <= 0) return `Step ${index} must have a positive whole-number value.`;
+  if (!label || label.trim() === "") return `Step ${index} must include a label.`;
+  if (label.length > WORKOUT_LIMITS.maxLabelLength) return `Step ${index} label is too long (maximum ${WORKOUT_LIMITS.maxLabelLength} characters).`;
+  const timeSeconds = type === "time" ? value : 0;
+  if (timeSeconds > WORKOUT_LIMITS.maxTimeSeconds) return `Step ${index} is too long (maximum duration is 24 hours).`;
+  if (type === "reps" && value > WORKOUT_LIMITS.maxReps) return `Step ${index} has too many reps (maximum is ${WORKOUT_LIMITS.maxReps}).`;
+  return null;
+}
 
 export function validateWorkout(workout) {
   if (typeof workout.title !== "string") return "Workout title must be text.";
@@ -17,18 +24,14 @@ export function validateWorkout(workout) {
   if (workout.steps.length > WORKOUT_LIMITS.maxSteps) return `A workout can contain at most ${WORKOUT_LIMITS.maxSteps} steps.`;
 
   for (const [index, step] of workout.steps.entries()) {
-    if (!Number.isInteger(step.value) || step.value <= 0) return `Step ${index + 1}: amount must be a positive whole number.`;
-    if (step.type !== "time" && step.type !== "reps") return `Step ${index + 1}: choose seconds, minutes, or reps.`;
-    if (typeof step.label !== "string" || step.label.trim() === "") return `Step ${index + 1}: add a label.`;
-    if (step.label.length > WORKOUT_LIMITS.maxLabelLength) return `Step ${index + 1}: label is too long (maximum ${WORKOUT_LIMITS.maxLabelLength} characters).`;
-    const timeSeconds = step.unit === "minutes" ? step.value * 60 : step.value;
-    if (step.type === "time" && timeSeconds > WORKOUT_LIMITS.maxTimeSeconds) return `Step ${index + 1}: duration cannot exceed 24 hours.`;
-    if (step.type === "reps" && step.value > WORKOUT_LIMITS.maxReps) return `Step ${index + 1}: reps cannot exceed ${WORKOUT_LIMITS.maxReps}.`;
+    const value = step.unit === "minutes" ? step.value * 60 : step.value;
+    const stepError = validateStep(step.type, value, step.label, index + 1);
+    if (stepError) return stepError;
   }
   return null;
 }
 
-export function serializeWorkout(workout, baseUrl = window.location.origin + window.location.pathname) {
+export function serializeWorkout(workout, baseUrl) {
   const validationError = validateWorkout(workout);
   if (validationError) return { ok: false, message: validationError };
   const params = new URLSearchParams();
@@ -37,21 +40,17 @@ export function serializeWorkout(workout, baseUrl = window.location.origin + win
     const suffix = step.type === "reps" ? "x" : step.unit === "minutes" ? "m" : "s";
     params.append(`${step.value}${suffix}`, step.label.trim());
   }
-  return { ok: true, url: `${baseUrl}?${params.toString()}` };
+  return { ok: true, url: `${baseUrl ?? ""}?${params.toString()}` };
 }
 
 export function modelFromBuilderRows(title, rows) {
   return {
     title,
     steps: rows.map((row) => ({
-      type: UNIT_TO_TYPE[row.unit],
+      type: row.unit === "x" ? "reps" : "time",
       unit: row.unit === "m" ? "minutes" : "seconds",
       value: row.amount === "" ? NaN : Number(row.amount),
       label: row.label,
     })),
   };
-}
-
-export function roundTripWorkout(url) {
-  return parseTimerUrl(new URL(url).search);
 }

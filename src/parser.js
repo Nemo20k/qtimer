@@ -1,20 +1,8 @@
 const NEW_STEP_KEY = /^(\d+)(s|m|x)$/;
-const MAX_STEPS = 200;
-const MAX_LABEL_LENGTH = 200;
-const MAX_TIME_SECONDS = 24 * 60 * 60;
-const MAX_REPS = 10000;
+import { validateStep, WORKOUT_LIMITS } from "./workout.js";
 
 function error(message) {
   return { ok: false, message };
-}
-
-function validateStep(type, value, label, index) {
-  if (!label || label.trim() === "") return `Step ${index} must include a label.`;
-  if (label.length > MAX_LABEL_LENGTH) return `Step ${index} label is too long (maximum ${MAX_LABEL_LENGTH} characters).`;
-  if (!Number.isInteger(value) || value <= 0) return `Step ${index} must have a positive whole-number value.`;
-  if (type === "time" && value > MAX_TIME_SECONDS) return `Step ${index} is too long (maximum duration is 24 hours).`;
-  if (type === "reps" && value > MAX_REPS) return `Step ${index} has too many reps (maximum is ${MAX_REPS}).`;
-  return null;
 }
 
 function parseNewStep(key, label, index) {
@@ -54,7 +42,7 @@ function parseLegacySteps(parameters) {
     steps.push({ type, value, label });
   }
 
-  if (steps.length > MAX_STEPS) return error(`A workout can contain at most ${MAX_STEPS} steps.`);
+  if (steps.length > WORKOUT_LIMITS.maxSteps) return error(`A workout can contain at most ${WORKOUT_LIMITS.maxSteps} steps.`);
   return steps;
 }
 
@@ -73,7 +61,7 @@ export function parseTimerUrl(search = "") {
   let steps;
   if (newSteps.length > 0) {
     if (invalidNewStepError) return error(invalidNewStepError);
-    if (newSteps.length > MAX_STEPS) return error(`A workout can contain at most ${MAX_STEPS} steps.`);
+    if (newSteps.length > WORKOUT_LIMITS.maxSteps) return error(`A workout can contain at most ${WORKOUT_LIMITS.maxSteps} steps.`);
     steps = newSteps;
   } else {
     steps = parseLegacySteps(parameters);

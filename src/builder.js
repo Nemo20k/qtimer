@@ -44,18 +44,19 @@ export function mountBuilder(root) {
     });
   }
 
+  const baseUrl = `${window.location.origin}${window.location.pathname}`;
   function getUrl() {
-    const result = serializeWorkout(modelFromBuilderRows(titleInput.value, rows));
+    const result = serializeWorkout(modelFromBuilderRows(titleInput.value, rows), baseUrl);
     errorElement.hidden = result.ok; errorElement.textContent = result.ok ? "" : result.message;
     return result;
   }
-  async function copy(text, feedback) {
+  async function copyToClipboard(text, feedback) {
     try { await navigator.clipboard.writeText(text); } catch { const area = document.createElement("textarea"); area.value = text; document.body.append(area); area.select(); document.execCommand("copy"); area.remove(); }
     feedback.textContent = "Copied!"; setTimeout(() => { feedback.textContent = ""; }, 1800);
   }
   root.querySelector(".add-step-button").addEventListener("click", () => { if (rows.length < WORKOUT_LIMITS.maxSteps) { rows.push({ amount: "30", unit: "s", label: "Work" }); renderRows(); rowsElement.lastElementChild.querySelector(".label-input").focus(); } });
   root.querySelector(".start-workout-button").addEventListener("click", () => { const result = getUrl(); if (result.ok) window.location.assign(result.url); });
-  root.querySelector(".copy-link-button").addEventListener("click", async () => { const result = getUrl(); if (result.ok) await copy(result.url, root.querySelector(".copy-feedback")); });
-  root.querySelector(".copy-instructions-button").addEventListener("click", async () => await copy(INSTRUCTIONS, root.querySelector(".instructions-feedback")));
+  root.querySelector(".copy-link-button").addEventListener("click", async () => { const result = getUrl(); if (result.ok) await copyToClipboard(result.url, root.querySelector(".copy-feedback")); });
+  root.querySelector(".copy-instructions-button").addEventListener("click", async () => await copyToClipboard(INSTRUCTIONS, root.querySelector(".instructions-feedback")));
   renderRows();
 }
