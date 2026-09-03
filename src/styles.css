@@ -100,7 +100,10 @@ button:focus-visible {
 .brand {
   color: #f5c451;
   font-size: 0.8rem;
+  text-decoration: none;
 }
+
+.brand:hover { color: #ffd978; }
 
 h1,
 h2,
@@ -339,14 +342,26 @@ p {
   display: inline-flex;
   font-size: 0.9rem;
   gap: 0.55rem;
-  margin-top: 0.4rem;
+  margin: 0;
 }
 
-.sound-checkbox {
+.ready-cues {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.7rem;
+  text-align: left;
+  width: 10.5rem;
+}
+
+.sound-checkbox,
+.voice-checkbox {
   accent-color: #f5c451;
   height: 1.1rem;
+  margin: 0;
   width: 1.1rem;
 }
+
+.voice-checkbox { accent-color: #8ab4e8; }
 
 .paused-countdown {
   color: #ffffff;
@@ -357,6 +372,20 @@ p {
   line-height: 1;
   margin: 0.8rem 0 0;
 }
+
+.paused-display {
+  align-items: center;
+  display: flex;
+  height: min(72vw, 23rem);
+  justify-content: center;
+  max-height: 48vh;
+  max-width: 23rem;
+  position: relative;
+  width: min(72vw, 23rem);
+}
+
+.paused-ring { height: 100%; position: absolute; transform: rotate(-90deg); width: 100%; }
+.paused-ring .ring-progress { stroke: #59616a; transition: none; }
 
 .primary-button {
   background: #f5c451;
@@ -420,11 +449,16 @@ p {
 }
 
 .main-display {
-  height: min(72vw, 23rem);
+  height: min(72vw, 27rem);
   max-height: 48vh;
-  max-width: 23rem;
+  max-width: 27rem;
   position: relative;
-  width: min(72vw, 23rem);
+  width: min(72vw, 27rem);
+}
+
+@media (min-width: 900px) {
+  .main-display, .paused-display { height: min(72vw, 27rem); max-width: 27rem; width: min(72vw, 27rem); }
+  .countdown, .rep-count, .paused-countdown { font-size: clamp(3.7rem, 13vw, 6.6rem); }
 }
 
 .time-step-view,

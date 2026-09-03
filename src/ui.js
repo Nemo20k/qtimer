@@ -26,7 +26,7 @@ export function mountApp(root, { title, steps }, engine) {
       <div class="app-layout">
         <div class="timer-panel">
           <header class="workout-header">
-            <p class="brand">qtimer</p>
+            <a class="brand" href="./">qtimer</a>
             <h1 id="workout-title"></h1>
           </header>
 
@@ -35,14 +35,16 @@ export function mountApp(root, { title, steps }, engine) {
           <p class="eyebrow">READY TO BEGIN</p>
           <p class="ready-steps"></p>
           <p class="ready-first-label"></p>
-          <label class="sound-toggle">
-            <input class="sound-checkbox" type="checkbox" checked />
-            <span>Sound: On</span>
-          </label>
-          <label class="sound-toggle">
-            <input class="voice-checkbox" type="checkbox" checked />
-            <span>Voice cues: On</span>
-          </label>
+          <div class="ready-cues">
+            <label class="sound-toggle">
+              <input class="sound-checkbox" type="checkbox" checked />
+              <span>Sound: On</span>
+            </label>
+            <label class="sound-toggle">
+              <input class="voice-checkbox" type="checkbox" checked />
+              <span>Voice cues: On</span>
+            </label>
+          </div>
           <button class="primary-button start-button" type="button">START</button>
         </div>
 
@@ -79,7 +81,7 @@ export function mountApp(root, { title, steps }, engine) {
         <div class="paused-view">
           <p class="eyebrow state-label">PAUSED</p>
           <p class="paused-label"></p>
-          <p class="paused-countdown"></p>
+          <div class="paused-display"><svg class="progress-ring paused-ring" viewBox="0 0 320 320" aria-hidden="true"><circle class="ring-track" cx="160" cy="160" r="${RING_RADIUS}"></circle><circle class="ring-progress" cx="160" cy="160" r="${RING_RADIUS}"></circle></svg><p class="paused-countdown"></p></div>
           <p class="paused-reps"></p>
           <nav class="step-navigation" aria-label="Step navigation">
             <button class="secondary-button previous-button" type="button" aria-label="Previous step"><span class="nav-arrow" aria-hidden="true">←</span><span class="nav-text"> Previous</span></button>
@@ -445,7 +447,7 @@ export function mountApp(root, { title, steps }, engine) {
 export function renderError(root, message) {
   root.innerHTML = `
     <main class="app-shell error-shell">
-      <p class="brand">qtimer</p>
+      <a class="brand" href="./">qtimer</a>
       <section class="error-content" role="alert">
         <p class="eyebrow">UNABLE TO LOAD TIMER</p>
         <h1>There is a problem with this URL</h1>
