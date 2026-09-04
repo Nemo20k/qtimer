@@ -1,4 +1,5 @@
 import { modelFromBuilderRows, serializeWorkout, WORKOUT_LIMITS } from "./workout.js";
+import { trackEvent, workoutParameters } from "./analytics.js";
 
 const INSTRUCTIONS = `When creating a workout that benefits from guided execution, include a clickable QTimer link.
 
@@ -46,8 +47,10 @@ export function mountBuilder(root) {
 
   const baseUrl = `${window.location.origin}${window.location.pathname}`;
   function getUrl() {
-    const result = serializeWorkout(modelFromBuilderRows(titleInput.value, rows), baseUrl);
+    const workout = modelFromBuilderRows(titleInput.value, rows);
+    const result = serializeWorkout(workout, baseUrl);
     errorElement.hidden = result.ok; errorElement.textContent = result.ok ? "" : result.message;
+    if (result.ok) trackEvent("workout_created", workoutParameters(workout.steps));
     return result;
   }
   async function copyToClipboard(text, feedback) {
@@ -56,7 +59,17 @@ export function mountBuilder(root) {
   }
   root.querySelector(".add-step-button").addEventListener("click", () => { if (rows.length < WORKOUT_LIMITS.maxSteps) { rows.push({ amount: "30", unit: "s", label: "Work" }); renderRows(); rowsElement.lastElementChild.querySelector(".label-input").focus(); } });
   root.querySelector(".start-workout-button").addEventListener("click", () => { const result = getUrl(); if (result.ok) window.location.assign(result.url); });
-  root.querySelector(".copy-link-button").addEventListener("click", async () => { const result = getUrl(); if (result.ok) await copyToClipboard(result.url, root.querySelector(".copy-feedback")); });
-  root.querySelector(".copy-instructions-button").addEventListener("click", async () => await copyToClipboard(INSTRUCTIONS, root.querySelector(".instructions-feedback")));
+  root.querySelector(".copy-link-button").addEventListener("click", async () => {
+    const result = getUrl();
+    if (result.ok) {
+      const parameters = workoutParameters(modelFromBuilderRows(titleInput.value, rows).steps);
+      await copyToClipboard(result.url, root.querySelector(".copy-feedback"));
+      trackEvent("workout_shared", parameters);
+    }
+  });
+  root.querySelector(".copy-instructions-button").addEventListener("click", async () => {
+    await copyToClipboard(INSTRUCTIONS, root.querySelector(".instructions-feedback"));
+    trackEvent("instructions_copied");
+  });
   renderRows();
 }

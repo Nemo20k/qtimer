@@ -1,5 +1,6 @@
 import { TIMER_STATES } from "./timer-engine.js";
 import { cancelSpeech, initAudio, playBeep, playCompletionBeep, speakLabel } from "./audio.js";
+import { trackEvent, workoutParameters } from "./analytics.js";
 
 const RING_RADIUS = 138;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
@@ -252,6 +253,7 @@ export function mountApp(root, { title, steps }, engine) {
     const events = engine.consumeEvents();
     processAudioEvents(events);
     processNarrationEvents(events);
+    processAnalyticsEvents(events);
     renderStepLists(snapshot);
 
     appShell.dataset.state = snapshot.status.toLowerCase();
@@ -322,6 +324,7 @@ export function mountApp(root, { title, steps }, engine) {
     if (elapsed >= PRESTART_DURATION_MS) {
       stopPrestartCountdown();
       engine.start();
+      trackEvent("workout_started", workoutParameters(steps));
       const events = engine.consumeEvents();
       processAudioEvents(events);
       processNarrationEvents(events);
@@ -346,6 +349,12 @@ export function mountApp(root, { title, steps }, engine) {
     if (!voiceCheckbox.checked) return;
     for (const event of events) {
       if (event.type === "narrate") speakLabel(event.label);
+    }
+  }
+
+  function processAnalyticsEvents(events) {
+    for (const event of events) {
+      if (event.type === "complete") trackEvent("workout_completed", workoutParameters(steps));
     }
   }
 
