@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { trackEvent, workoutParameters } from "../src/analytics.js";
+import { trackEvent, workoutParameters, workoutStartedParameters } from "../src/analytics.js";
 import { TIMER_STATES, TimerEngine } from "../src/timer-engine.js";
 
 const steps = [
@@ -59,6 +59,18 @@ test("analytics fail silently when gtag is unavailable or throws", () => {
   } finally {
     restoreGlobal("gtag", originalGtag);
   }
+});
+
+test("workout start analytics adds only the landing-page source", () => {
+  assert.deepEqual(workoutStartedParameters(steps, "tabata_timer"), {
+    step_count: 2,
+    timed_step_count: 1,
+    rep_step_count: 1,
+    total_timed_seconds: 30,
+    source_page: "tabata_timer",
+  });
+  assert.deepEqual(workoutStartedParameters(steps), workoutParameters(steps));
+  assert.equal(JSON.stringify(workoutStartedParameters(steps, "tabata_timer")).includes("Private"), false);
 });
 
 test("timer start is not repeated by resume and completion is emitted once", () => {

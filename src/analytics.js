@@ -15,3 +15,9 @@ export function workoutParameters(steps) {
     total_timed_seconds: timedSteps.reduce((total, step) => total + step.value, 0),
   };
 }
+
+export function workoutStartedParameters(steps, sourcePage) {
+  const parameters = workoutParameters(steps);
+  if (sourcePage) parameters.source_page = sourcePage;
+  return parameters;
+}

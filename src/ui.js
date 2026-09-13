@@ -1,6 +1,6 @@
 import { TIMER_STATES } from "./timer-engine.js";
 import { cancelSpeech, initAudio, playBeep, playCompletionBeep, speakLabel } from "./audio.js";
-import { trackEvent, workoutParameters } from "./analytics.js";
+import { trackEvent, workoutParameters, workoutStartedParameters } from "./analytics.js";
 
 const RING_RADIUS = 138;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
@@ -21,7 +21,7 @@ function setHidden(element, hidden) {
   element.hidden = hidden;
 }
 
-export function mountApp(root, { title, steps }, engine) {
+export function mountApp(root, { title, steps }, engine, { sourcePage } = {}) {
   root.innerHTML = `
     <main class="app-shell" aria-label="qtimer">
       <div class="app-layout">
@@ -324,7 +324,7 @@ export function mountApp(root, { title, steps }, engine) {
     if (elapsed >= PRESTART_DURATION_MS) {
       stopPrestartCountdown();
       engine.start();
-      trackEvent("workout_started", workoutParameters(steps));
+      trackEvent("workout_started", workoutStartedParameters(steps, sourcePage));
       const events = engine.consumeEvents();
       processAudioEvents(events);
       processNarrationEvents(events);

@@ -1,5 +1,7 @@
 import { modelFromBuilderRows, serializeWorkout, WORKOUT_LIMITS } from "./workout.js";
 import { trackEvent, workoutParameters } from "./analytics.js";
+import { getBuilderPreset } from "./landing-pages.js";
+
 
 const INSTRUCTIONS = `When creating a workout that benefits from guided execution, include a clickable QTimer link.
 
@@ -22,12 +24,14 @@ Present it as:
 ▶ Start workout timer`;
 
 export function mountBuilder(root) {
-  let rows = [{ amount: "30", unit: "s", label: "Work" }, { amount: "15", unit: "s", label: "Rest" }];
+  const preset = getBuilderPreset(window.location.hash);
+  let rows = preset?.rows ?? [{ amount: "30", unit: "s", label: "Work" }, { amount: "15", unit: "s", label: "Rest" }];
   document.body.classList.add("landing-page");
   root.innerHTML = `<main class="landing-shell"><header class="landing-header"><a class="brand" href="./">qtimer</a><h1>Free Custom Workout Timer</h1><p class="landing-lede">Build and run HIIT, Tabata, EMOM, circuit and custom workouts. Share any workout as a link — no signup or app required.</p></header><section class="ai-section"><h2>Let your AI build a timer for you</h2><p>Paste these instructions into any chat and it can generate a workout with a ready-to-run timer link.</p><button class="copy-instructions-button" type="button">Copy instructions</button><p class="instructions-feedback" aria-live="polite"></p></section><section class="builder" aria-labelledby="builder-title"><p class="section-or">OR</p><h2 id="builder-title">Build manually</h2><label class="field-label" for="workout-title-input">Workout title</label><input id="workout-title-input" class="text-input title-input" maxlength="${WORKOUT_LIMITS.maxTitleLength}" placeholder="Optional title" /><div class="builder-column-labels" aria-hidden="true"><span>Amount</span><span>Unit</span><span>Label</span></div><div class="builder-rows"></div><button class="add-step-button" type="button">+ Add step</button><p class="builder-error" role="alert" hidden></p><button class="primary-button start-workout-button" type="button">Start workout</button><button class="copy-link-button" type="button">Copy shareable workout link</button><p class="copy-feedback" aria-live="polite"></p></section></main>`;
   const rowsElement = root.querySelector(".builder-rows");
   const titleInput = root.querySelector(".title-input");
   const errorElement = root.querySelector(".builder-error");
+  if (preset) titleInput.value = preset.title;
 
   function renderRows() {
     rowsElement.replaceChildren();

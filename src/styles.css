@@ -250,6 +250,21 @@ p {
 }
 
 .landing-header { text-align: center; }
+.preset-landing { max-width: 44rem; }
+.preset-card { background: #171b1f; border: 1px solid #2d343a; border-radius: 1rem; margin-top: 2.25rem; padding: clamp(1.25rem, 5vw, 2rem); }
+.preset-card h2, .landing-links h2 { color: #f5c451; font-family: Georgia, "Times New Roman", serif; font-size: 1.45rem; letter-spacing: 0.02em; margin: 0.55rem 0 0.65rem; }
+.preset-card > p:not(.eyebrow), .landing-links p { color: #b5bbc1; line-height: 1.55; }
+.preset-facts { display: grid; gap: 0.55rem; list-style: none; margin: 1.25rem 0 0; padding: 0; }
+.preset-facts li { border-top: 1px solid #2d343a; color: #f4f5f6; padding-top: 0.55rem; }
+.preset-facts li::before { color: #f5c451; content: "✓"; font-weight: 800; margin-right: 0.65rem; }
+.landing-actions { align-items: center; display: flex; flex-wrap: wrap; gap: 1rem 1.25rem; justify-content: center; margin-top: 1.6rem; }
+.landing-action { align-items: center; display: inline-flex; justify-content: center; min-height: 58px; min-width: 13rem; text-decoration: none; }
+.secondary-link { color: #f5c451; font-size: 0.85rem; font-weight: 700; text-underline-offset: 0.2rem; }
+.secondary-link:hover { color: #ffd978; }
+.landing-links { border-top: 1px solid #272d32; margin-top: 2.5rem; padding-top: 1.75rem; text-align: center; }
+.landing-links nav { display: flex; flex-wrap: wrap; gap: 0.6rem 1rem; justify-content: center; }
+.landing-links nav a { color: #b5bbc1; font-size: 0.9rem; text-underline-offset: 0.2rem; }
+.landing-links nav a:hover { color: #f5c451; }
 .landing-header h1 { font-size: clamp(2rem, 8vw, 3.5rem); letter-spacing: -0.05em; line-height: 1; margin: 1.5rem 0 0.5rem; }
 .landing-lede { color: #8c949d; font-size: 0.85rem; margin-bottom: 0; }
 .ai-section p { color: #8c949d; margin-bottom: 0; }
