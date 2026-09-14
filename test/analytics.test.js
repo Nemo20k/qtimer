@@ -40,6 +40,25 @@ test("tracks all analytics events with aggregate workout parameters only", () =>
     });
     assert.deepEqual(calls[4][2], {});
     assert.equal(JSON.stringify(calls).includes("Private"), false);
+    assert.equal(JSON.stringify(calls).includes("Create a workout"), false);
+  } finally {
+    restoreGlobal("gtag", originalGtag);
+  }
+});
+
+test("AI analytics events contain no prompt, workout content, or API body", () => {
+  const originalGtag = globalThis.gtag;
+  const calls = [];
+  globalThis.gtag = (...args) => calls.push(args);
+
+  try {
+    for (const name of ["ai_generate_submitted", "ai_generate_started", "ai_generate_succeeded", "ai_generate_failed", "builder_tab_changed", "ai_workout_started", "ai_workout_copied", "ai_workout_edited"]) {
+      trackEvent(name, { step_count: 2 });
+    }
+    const serialized = JSON.stringify(calls);
+    assert.equal(serialized.includes("Create a workout"), false);
+    assert.equal(serialized.includes("Private"), false);
+    assert.equal(serialized.includes("invalid_ai_response"), false);
   } finally {
     restoreGlobal("gtag", originalGtag);
   }
