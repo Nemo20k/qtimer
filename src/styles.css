@@ -270,7 +270,7 @@ p {
 .visually-hidden { clip: rect(0 0 0 0); clip-path: inset(50%); height: 1px; overflow: hidden; position: absolute; white-space: nowrap; width: 1px; }
 .field-label, .manual-builder h2 { color: #b5bbc1; display: block; font-size: 0.78rem; font-weight: 800; letter-spacing: 0.1em; margin-bottom: 0.65rem; text-transform: uppercase; }
 .manual-builder h2 { color: #f5c451; font-family: Georgia, "Times New Roman", serif; font-size: 1.35rem; letter-spacing: 0.04em; margin: 0 0 1.35rem; }
-.builder-column-labels { color: #707981; display: grid; font-size: 0.68rem; font-weight: 800; grid-template-columns: 3.8rem 5rem minmax(0, 1fr) 2.8rem; gap: 0.45rem; letter-spacing: 0.1em; margin-bottom: 0.35rem; text-transform: uppercase; }
+.builder-column-labels { border-top: 1px solid #2d343a; color: #707981; display: grid; font-size: 0.68rem; font-weight: 800; grid-template-columns: 3.8rem 5rem minmax(0, 1fr) 2.8rem; gap: 0.45rem; letter-spacing: 0.1em; margin-bottom: 0.35rem; margin-top: 1.2rem; padding-top: 0.8rem; text-transform: uppercase; }
 .builder-column-labels span:nth-child(2), .builder-column-labels span:nth-child(3) { padding-left: 0.45rem; }
 .text-input, .amount-input, .unit-input { background: #1b2024; border: 1px solid #343b42; border-radius: 0.65rem; color: #f4f5f6; font: inherit; min-height: 48px; padding: 0 0.8rem; width: 100%; }
 .text-input:focus, .amount-input:focus, .unit-input:focus { border-color: #f5c451; outline: 2px solid #f5c451; outline-offset: 1px; }
