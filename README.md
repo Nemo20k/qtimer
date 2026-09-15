@@ -35,7 +35,7 @@ http://localhost:5173/?title=Quick%20Workout&6x=Push-ups&50s=Rest&10x=Squats&1m=
 http://localhost:5173/?title=Tabata&20s=Work&10s=Rest&20s=Work&10s=Rest
 ```
 
-The URL is the source of truth. qtimer does not use accounts, persistence, cookies, backend services, analytics, or external APIs. Sound cues use the browser's native Web Audio API and are enabled by default on the ready screen; sound is not stored.
+The URL is the source of truth. qtimer does not require accounts and does not deliberately persist workout content in the application. AI generation uses the configured qtimer API and Cloudflare Workers AI; Google Analytics receives sanitized, aggregate usage events. Sound cues use the browser's native Web Audio API and are enabled by default on the ready screen; sound is not stored.
 
 When voice cues are enabled, pressing `START` announces the first step and shows a three-second get-ready countdown before the workout clock begins.
 

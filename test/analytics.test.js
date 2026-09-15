@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { trackEvent, workoutParameters, workoutStartedParameters } from "../src/analytics.js";
+import { initAnalytics, trackEvent, workoutParameters, workoutStartedParameters } from "../src/analytics.js";
 import { TIMER_STATES, TimerEngine } from "../src/timer-engine.js";
 
 const steps = [
@@ -36,7 +36,7 @@ test("tracks all analytics events with aggregate workout parameters only", () =>
       step_count: 2,
       timed_step_count: 1,
       rep_step_count: 1,
-      total_timed_seconds: 30,
+      duration_bucket: "under_5m",
     });
     assert.deepEqual(calls[4][2], {});
     assert.equal(JSON.stringify(calls).includes("Private"), false);
@@ -80,12 +80,58 @@ test("analytics fail silently when gtag is unavailable or throws", () => {
   }
 });
 
+test("page views use a path-only location and are initialized once", () => {
+  const originalGtag = globalThis.gtag;
+  const originalLocation = globalThis.location;
+  const calls = [];
+  globalThis.gtag = (...args) => calls.push(args);
+  globalThis.location = { pathname: "/?title=Private#30s=Secret", origin: "https://qtimer.app" };
+  delete globalThis.__qtimerAnalyticsInitialized;
+
+  try {
+    initAnalytics();
+    initAnalytics();
+    const pageViewCalls = calls.filter(([, name]) => name === "page_view");
+    assert.equal(pageViewCalls.length, 1);
+    assert.equal(pageViewCalls[0][2].page_path, "/");
+    assert.equal(pageViewCalls[0][2].page_location, "https://qtimer.app/");
+    assert.equal(JSON.stringify(pageViewCalls[0]).includes("Private"), false);
+    assert.equal(JSON.stringify(pageViewCalls[0]).includes("Secret"), false);
+  } finally {
+    restoreGlobal("gtag", originalGtag);
+    restoreGlobal("location", originalLocation);
+    delete globalThis.__qtimerAnalyticsInitialized;
+  }
+});
+
+test("analytics removes content and unknown metadata from safe events", () => {
+  const originalGtag = globalThis.gtag;
+  const calls = [];
+  globalThis.gtag = (...args) => calls.push(args);
+
+  try {
+    trackEvent("workout_started", {
+      title: "Private title",
+      label: "Private label",
+      prompt: "Private prompt",
+      url: "https://qtimer.app/?secret=1",
+      step_count: 2,
+      duration_bucket: "under_5m",
+    });
+    assert.deepEqual(calls[0][2], { step_count: 2, duration_bucket: "under_5m" });
+    assert.equal(JSON.stringify(calls).includes("Private"), false);
+    assert.equal(JSON.stringify(calls).includes("secret"), false);
+  } finally {
+    restoreGlobal("gtag", originalGtag);
+  }
+});
+
 test("workout start analytics adds only the landing-page source", () => {
   assert.deepEqual(workoutStartedParameters(steps, "tabata_timer"), {
     step_count: 2,
     timed_step_count: 1,
     rep_step_count: 1,
-    total_timed_seconds: 30,
+    duration_bucket: "under_5m",
     source_page: "tabata_timer",
   });
   assert.deepEqual(workoutStartedParameters(steps), workoutParameters(steps));

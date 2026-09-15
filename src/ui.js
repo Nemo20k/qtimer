@@ -2,6 +2,7 @@ import { TIMER_STATES } from "./timer-engine.js";
 import { cancelSpeech, initAudio, playBeep, playCompletionBeep, speakLabel } from "./audio.js";
 import { trackEvent, workoutParameters, workoutStartedParameters } from "./analytics.js";
 import { createWakeLockController } from "./wake-lock.js";
+import { siteFooterMarkup } from "./site-footer.js";
 
 const RING_RADIUS = 138;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
@@ -79,11 +80,12 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
             </div>
           </div>
           <div class="done-slot"><button class="primary-button done-button" type="button">DONE</button></div>
+          <button class="secondary-button pause-button" type="button" aria-label="Pause workout">PAUSE</button>
           <nav class="step-navigation" aria-label="Step navigation">
             <button class="secondary-button previous-button" type="button" aria-label="Previous step"><span class="nav-arrow" aria-hidden="true">←</span><span class="nav-text"> Previous</span></button>
             <button class="secondary-button next-button" type="button" aria-label="Next step"><span class="nav-text">Next </span><span class="nav-arrow" aria-hidden="true">→</span></button>
           </nav>
-          <p class="tap-hint">Tap anywhere to pause</p>
+          <p class="tap-hint">Tap the background to pause</p>
         </div>
 
         <div class="paused-view">
@@ -152,6 +154,7 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
           </div>
         </div>
       </div>
+      ${siteFooterMarkup("app-site-footer")}
     </main>
   `;
 
@@ -177,8 +180,11 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
   const workoutElapsed = root.querySelector(".workout-elapsed");
   const pausedLabel = root.querySelector(".paused-label");
   const pausedCountdown = root.querySelector(".paused-countdown");
+  const pausedRingProgress = root.querySelector(".paused-ring .ring-progress");
   const pausedReps = root.querySelector(".paused-reps");
   const completedSummary = root.querySelector(".completed-summary");
+  const pauseButton = root.querySelector(".pause-button");
+  const resumeButton = root.querySelector(".resume-button");
   const statusText = root.querySelector(".state-label");
   const listContainers = root.querySelectorAll(".workout-list");
   const sidebarProgress = root.querySelector(".sidebar-progress");
@@ -343,7 +349,7 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
     processAnalyticsEvents(events);
     renderStepLists(snapshot);
 
-    appShell.dataset.state = snapshot.status.toLowerCase();
+    appShell.dataset.state = prestartStartedAt !== null ? "prestart" : snapshot.status.toLowerCase();
     statusText.textContent = snapshot.status === TIMER_STATES.PAUSED ? "PAUSED" : "COMPLETE";
     setHidden(readyView, snapshot.status !== TIMER_STATES.READY || prestartStartedAt !== null);
     setHidden(prestartView, prestartStartedAt === null);
@@ -373,7 +379,9 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
       pausedLabel.textContent = snapshot.currentStep.label;
       pausedCountdown.textContent = isTimeStep ? formatDuration(snapshot.currentRemainingMs) : "";
       pausedReps.textContent = isTimeStep ? "" : `${snapshot.currentStep.value} REPS`;
-      ringProgress.style.strokeDashoffset = `${RING_CIRCUMFERENCE * (1 - snapshot.currentProgress)}`;
+      const ringOffset = `${RING_CIRCUMFERENCE * (1 - snapshot.currentProgress)}`;
+      ringProgress.style.strokeDashoffset = ringOffset;
+      pausedRingProgress.style.strokeDashoffset = ringOffset;
     }
 
     if (snapshot.status === TIMER_STATES.COMPLETED) {
@@ -503,6 +511,23 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
     }
   }
 
+  function pauseWorkout(source) {
+    if (engine.status !== TIMER_STATES.RUNNING) return;
+    cancelSpeech();
+    engine.pause();
+    trackEvent("workout_paused", { interaction_source: source });
+    refresh();
+    if (source === "button" || source === "keyboard") resumeButton.focus();
+  }
+
+  function resumeWorkout(source) {
+    if (engine.status !== TIMER_STATES.PAUSED) return;
+    engine.resume();
+    trackEvent("workout_resumed", { interaction_source: source });
+    refresh();
+    if (source === "button" || source === "keyboard") pauseButton.focus();
+  }
+
   root.querySelector(".start-button").addEventListener("click", () => {
     if (prestartStartedAt !== null) return;
     wakeLockAcquiredTracked = false;
@@ -549,15 +574,15 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
 
   document.addEventListener("visibilitychange", handleVisibilityChange);
 
-  root.querySelector(".done-button").addEventListener("click", (event) => {
-    event.stopPropagation();
+  root.querySelector(".done-button").addEventListener("click", () => {
     engine.done();
     refresh();
   });
 
+  pauseButton.addEventListener("click", () => pauseWorkout("button"));
+
   for (const button of previousButtons) {
-    button.addEventListener("click", (event) => {
-      event.stopPropagation();
+    button.addEventListener("click", () => {
       cancelSpeech();
       engine.goToPreviousStep();
       refresh();
@@ -565,18 +590,14 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
   }
 
   for (const button of nextButtons) {
-    button.addEventListener("click", (event) => {
-      event.stopPropagation();
+    button.addEventListener("click", () => {
       cancelSpeech();
       engine.goToNextStep();
       refresh();
     });
   }
 
-  root.querySelector(".resume-button").addEventListener("click", () => {
-    engine.resume();
-    refresh();
-  });
+  resumeButton.addEventListener("click", () => resumeWorkout("button"));
 
   for (const restartButton of root.querySelectorAll(".paused-restart-button, .completed-restart-button")) {
     restartButton.addEventListener("click", () => {
@@ -587,10 +608,10 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
   }
 
   workoutArea.addEventListener("click", (event) => {
-    if (engine.status === TIMER_STATES.RUNNING && !event.target.closest("button")) {
-      engine.pause();
-      refresh();
-    }
+    const interactiveTarget = event.target?.closest?.(
+      "button, a, input, select, textarea, label, [role='button'], [data-no-background-pause]",
+    );
+    if (engine.status === TIMER_STATES.RUNNING && !interactiveTarget) pauseWorkout("background");
   });
 
   function handleGlobalKeydown(event) {
@@ -598,9 +619,8 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
 
     if (event.code === "Space" && (engine.status === TIMER_STATES.RUNNING || engine.status === TIMER_STATES.PAUSED)) {
       event.preventDefault();
-      if (engine.status === TIMER_STATES.RUNNING) engine.pause();
-      else engine.resume();
-      refresh();
+      if (engine.status === TIMER_STATES.RUNNING) pauseWorkout("keyboard");
+      else resumeWorkout("keyboard");
     }
 
     if (event.key.toLowerCase() === "r" && (engine.status === TIMER_STATES.PAUSED || engine.status === TIMER_STATES.COMPLETED)) {
@@ -635,6 +655,7 @@ export function renderError(root, message) {
         <p>${message}</p>
       <p class="error-example">Try: <code>?20s=Work&amp;10s=Rest</code></p>
       </section>
+      ${siteFooterMarkup()}
     </main>
   `;
 }

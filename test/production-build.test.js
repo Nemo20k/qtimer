@@ -20,4 +20,17 @@ test("production build emits every landing route", async () => {
     assert.match(html, new RegExp(`<title>${page.title}</title>`));
     assert.match(html, new RegExp(`<link rel="canonical" href="https://qtimer\\.app${page.path}"`));
   }
+
+  for (const path of ["privacy", "contact"]) {
+    const output = new URL(`dist/${path}/index.html`, root);
+    await access(output);
+    const html = await readFile(output, "utf8");
+    assert.match(html, new RegExp(`<link rel="canonical" href="https://qtimer\\.app/${path}/"`));
+    assert.match(html, /src="\/assets\//);
+  }
+  for (const path of ["", "hiit-timer", "tabata-timer", "emom-timer"]) {
+    const html = await readFile(new URL(`dist/${path ? `${path}/` : ""}index.html`, root), "utf8");
+    assert.doesNotMatch(html, /gtag\(['"]config/);
+  }
+  for (const filename of ["sitemap.xml", "robots.txt"]) await access(new URL(`dist/${filename}`, root));
 });

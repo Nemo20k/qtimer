@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#101214" />
+    <meta name="referrer" content="strict-origin" />
+    <meta name="description" content="How QTimer handles workout links, AI generation, analytics, local browser preferences and service providers." />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="https://qtimer.app/privacy/" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <meta property="og:title" content="Privacy | QTimer" />
+    <meta property="og:description" content="How QTimer handles workout links, AI generation, analytics, local browser preferences and service providers." />
+    <meta property="og:url" content="https://qtimer.app/privacy/" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Privacy | QTimer" />
+    <meta name="twitter:description" content="How QTimer handles workout links, AI generation, analytics, local browser preferences and service providers." />
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-M496SBC03Q"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+    </script>
+    <title>Privacy | QTimer</title>
+  </head>
+  <body class="landing-page">
+    <main class="policy-shell">
+      <header class="site-page-header">
+        <a class="brand" href="/">qtimer</a>
+        <p class="eyebrow">PRIVACY</p>
+        <h1>How QTimer handles your data</h1>
+        <p class="site-page-lede">QTimer is a browser-based workout timer. This page explains what moves through the app and what does not.</p>
+      </header>
+
+      <article class="policy-content">
+        <section>
+          <h2>Privacy at a glance</h2>
+          <p>QTimer helps you create, share and run workout timers. No account is required, and workouts can be created and used directly in your browser.</p>
+          <p>When you use AI workout generation, the description you submit is sent to the QTimer API and processed by its configured AI service.</p>
+        </section>
+
+        <section>
+          <h2>Workout links</h2>
+          <p>QTimer workout links contain the workout configuration in the URL. That can include a title, exercise labels, durations and repetitions. Anyone who receives a link may be able to read, use and share that information.</p>
+          <p>Do not put confidential, medical or personally identifying information in workout titles, labels or shared links.</p>
+        </section>
+
+        <section>
+          <h2>AI workout generation</h2>
+          <p>The workout description you submit is sent to <code>qtimer-api</code>. The API applies validation and safety checks, then sends the relevant prompt to Cloudflare Workers AI, which is the configured provider in this project.</p>
+          <p>If a generated result needs correction, the provider may also receive the generated candidate and structured validation feedback so it can try again. QTimer does not deliberately persist prompts or generated workouts in an application database. Infrastructure and provider systems may retain operational data or logs outside QTimer’s direct control, and their exact retention is not verified here.</p>
+          <p>Please do not submit sensitive personal or medical information.</p>
+        </section>
+
+        <section>
+          <h2>Analytics</h2>
+          <p>QTimer uses Google Analytics to understand coarse product usage and improve the application. QTimer intentionally excludes AI prompts, workout titles, step labels, serialized workouts, URL query parameters and URL hashes from analytics events and page views.</p>
+          <p>Google may process technical data under its own policies. QTimer does not provide a consent or opt-in flow. You can restrict analytics with browser settings or blocking tools if you choose.</p>
+        </section>
+
+        <section>
+          <h2>Local browser data</h2>
+          <p>QTimer does not use an account database or browser storage for workout content. Sound, voice narration and screen-awake choices are session controls on the ready screen; they are not saved by QTimer. The workout itself stays in the URL you open or create.</p>
+        </section>
+
+        <section>
+          <h2>Service providers</h2>
+          <ul>
+            <li><a href="https://pages.github.com/" target="_blank" rel="noopener noreferrer">GitHub Pages</a> hosts the website. See <a href="https://docs.github.com/en/site-policy/privacy-policies/github-privacy-statement" target="_blank" rel="noopener noreferrer">GitHub’s privacy statement</a>.</li>
+            <li><a href="https://workers.cloudflare.com/" target="_blank" rel="noopener noreferrer">Cloudflare Workers</a> runs the API, and <a href="https://developers.cloudflare.com/workers-ai/" target="_blank" rel="noopener noreferrer">Workers AI</a> processes AI generation. See <a href="https://www.cloudflare.com/privacypolicy/" target="_blank" rel="noopener noreferrer">Cloudflare’s privacy policy</a>.</li>
+            <li><a href="https://analytics.google.com/" target="_blank" rel="noopener noreferrer">Google Analytics</a> measures product usage. See <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google’s privacy policy</a>.</li>
+          </ul>
+          <p>These providers operate infrastructure that QTimer does not control, including their operational logging and retention.</p>
+        </section>
+
+        <section>
+          <h2>Retention</h2>
+          <p>QTimer has no application database configured for prompts or workouts, and the application does not deliberately persist them. The QTimer API may process a prompt and generated result in memory while fulfilling a request. Operational logs, rate-limiting systems and provider-side retention are outside the repository’s verified application behavior.</p>
+        </section>
+
+        <section>
+          <h2>User choices</h2>
+          <ul>
+            <li>Avoid entering sensitive content in prompts, titles and labels.</li>
+            <li>Remove QTimer preferences by clearing site data in your browser, although this version does not save those controls.</li>
+            <li>Keep workout URLs private when their contents should not be public.</li>
+            <li>Use browser privacy settings or blocking tools to restrict analytics.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2>Fitness disclaimer</h2>
+          <p>QTimer organizes timers and workouts. AI-generated workouts are general information, not medical advice. Choose activity appropriate to your health and ability; stop and seek appropriate help if you experience alarming symptoms.</p>
+        </section>
+
+        <section>
+          <h2>Changes and contact</h2>
+          <p>Last updated: September 15, 2026.</p>
+          <p>Questions or concerns? Visit the <a href="/contact/">Contact page</a>.</p>
+        </section>
+      </article>
+
+      <footer class="site-footer">
+        <span>QTimer</span>
+        <nav aria-label="Site information">
+          <a href="/privacy/" aria-current="page">Privacy</a>
+          <a href="/contact/">Contact</a>
+          <a href="https://github.com/Nemo20k/qtimer" target="_blank" rel="noopener noreferrer">GitHub <span aria-hidden="true">↗</span></a>
+        </nav>
+      </footer>
+    </main>
+    <script type="module" src="/src/static-page.js"></script>
+  </body>
+</html>

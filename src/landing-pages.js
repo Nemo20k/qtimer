@@ -1,4 +1,5 @@
 import { serializeWorkout } from "./workout.js";
+import { siteFooterMarkup } from "./site-footer.js";
 
 const HIIT_STEPS = [
   [40, "Work"], [20, "Rest"],
@@ -106,6 +107,20 @@ export function applyLandingMetadata(page) {
   }
 }
 
+export function applyMainMetadata() {
+  const title = "QTimer – Free Custom Workout & Interval Timer";
+  const description = "Create and run custom workout timers for HIIT, Tabata, EMOM, circuits and more. Build a workout, share the link, and start instantly. No signup required.";
+  document.title = title;
+  const descriptionElement = document.querySelector("meta[name=description]");
+  if (descriptionElement) descriptionElement.content = description;
+  const canonical = document.querySelector("link[rel=canonical]");
+  if (canonical) canonical.href = "https://qtimer.app/";
+  for (const [property, content] of [["og:title", title], ["og:description", description], ["og:url", "https://qtimer.app/"], ["twitter:title", title], ["twitter:description", description]]) {
+    const element = document.querySelector('meta[property="' + property + '"], meta[name="' + property + '"]');
+    if (element) element.content = content;
+  }
+}
+
 export function mountLandingPage(root, page) {
   const startUrl = presetUrl(page, window.location.origin);
   document.body.classList.add("landing-page");
@@ -136,6 +151,7 @@ export function mountLandingPage(root, page) {
           <a href="/">Custom workout builder</a>
         </nav>
       </section>
+      ${siteFooterMarkup()}
     </main>
   `;
 }

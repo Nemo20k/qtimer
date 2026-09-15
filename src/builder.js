@@ -5,6 +5,7 @@ import { trackEvent, workoutParameters } from "./analytics.js";
 import { getBuilderPreset } from "./landing-pages.js";
 import { builderRowsFromWorkout, normalizeGeneratedWorkout, workoutStepsForAnalytics } from "./ai-workout.js";
 import { copyAssistantInstructions, getAssistantInstructions, ASSISTANT_PROVIDERS } from "./ai-assistant.js";
+import { siteFooterMarkup } from "./site-footer.js";
 
 const EXAMPLE_PROMPTS = [
   "Create a 15-minute kettlebell workout with a warm-up and short rests.",
@@ -104,6 +105,7 @@ export function mountBuilder(root, { editWorkout } = {}) {
         <div class="assistant-controls" aria-label="AI assistant instruction controls"></div>
         <p class="assistant-feedback" role="status" aria-live="polite"></p>
       </section>
+      ${siteFooterMarkup()}
     </main>
   `;
 

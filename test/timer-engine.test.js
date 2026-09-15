@@ -87,6 +87,26 @@ test("elapsed workout time pauses and resumes accurately", () => {
   assert.equal(engine.snapshot().workoutElapsedMs, 4500);
 });
 
+test("pause and resume are idempotent and preserve the exact step position", () => {
+  const { engine, advance } = setup();
+
+  engine.start();
+  engine.consumeEvents();
+  advance(3500);
+  engine.pause();
+  engine.pause();
+  advance(5000);
+
+  assert.equal(engine.snapshot().currentRemainingMs, 6500);
+  assert.equal(engine.snapshot().workoutElapsedMs, 3500);
+
+  engine.resume();
+  engine.resume();
+  advance(1000);
+  assert.equal(engine.snapshot().currentRemainingMs, 5500);
+  assert.equal(engine.snapshot().workoutElapsedMs, 4500);
+});
+
 test("restart returns to step one and resets elapsed time", () => {
   const { engine, advance } = setup();
 

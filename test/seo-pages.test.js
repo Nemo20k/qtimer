@@ -24,7 +24,15 @@ test("sitemap contains only canonical public pages", async () => {
 
   assert.deepEqual(urls, [
     "https://qtimer.app/",
+    "https://qtimer.app/privacy/",
+    "https://qtimer.app/contact/",
     ...Object.values(LANDING_PAGES).map((page) => `https://qtimer.app${page.path}`),
   ]);
   assert.equal(urls.some((url) => url.includes("?")), false);
+});
+
+test("robots references the production sitemap", async () => {
+  const robots = await readFile(new URL("public/robots.txt", root), "utf8");
+  assert.match(robots, /Allow: \/\n/);
+  assert.match(robots, /Sitemap: https:\/\/qtimer\.app\/sitemap\.xml/);
 });

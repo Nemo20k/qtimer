@@ -2,10 +2,12 @@ import { parseTimerUrl } from "./parser.js";
 import { TimerEngine } from "./timer-engine.js";
 import { mountApp, renderError } from "./ui.js";
 import { mountBuilder } from "./builder.js";
-import { applyLandingMetadata, getLandingPage, mountLandingPage } from "./landing-pages.js";
-import { trackEvent } from "./analytics.js";
+import { applyLandingMetadata, applyMainMetadata, getLandingPage, mountLandingPage } from "./landing-pages.js";
+import { initAnalytics, trackEvent } from "./analytics.js";
 
 import "./styles.css";
+
+initAnalytics();
 
 const root = document.querySelector("#app");
 let unmount = null;
@@ -25,7 +27,8 @@ function renderApp() {
 
   const result = parseTimerUrl(window.location.search);
   const landingPage = getLandingPage(window.location.pathname);
-  if (landingPage) applyLandingMetadata(landingPage);
+  if (landingPage && window.location.search === "") applyLandingMetadata(landingPage);
+  else if (window.location.search !== "") applyMainMetadata();
 
   if (window.location.hash === "#edit") {
     if (result.ok) {
