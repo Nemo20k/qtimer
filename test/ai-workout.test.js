@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { hasMeaningfulManualEdits } from "../src/builder.js";
 import { builderRowsFromWorkout, copyGeneratedWorkout, normalizeGeneratedWorkout, startGeneratedWorkout, workoutStepsForAnalytics } from "../src/ai-workout.js";
+import { parseTimerUrl } from "../src/parser.js";
 
 const response = {
   result: "workout",
@@ -19,6 +20,16 @@ test("maps generated steps into the existing builder row model", () => {
   assert.deepEqual(workoutStepsForAnalytics(response.workout), [
     { type: "time", value: 30, label: "Work" },
     { type: "reps", value: 8, label: "Squats" },
+  ]);
+});
+
+test("maps a runner workout back to its authored minutes and reps", () => {
+  const parsed = parseTimerUrl("?title=Mixed&5m=Warm-up&90s=Work&8x=Squats");
+  assert.equal(parsed.ok, true);
+  assert.deepEqual(builderRowsFromWorkout(parsed), [
+    { amount: "5", unit: "m", label: "Warm-up" },
+    { amount: "90", unit: "s", label: "Work" },
+    { amount: "8", unit: "x", label: "Squats" },
   ]);
 });
 

@@ -2,11 +2,17 @@ import { trackEvent, workoutParameters } from "./analytics.js";
 import { modelFromBuilderRows, serializeWorkout } from "./workout.js";
 
 export function builderRowsFromWorkout(workout) {
-  return workout.steps.map((step) => ({
-    amount: String(step.type === "time" ? step.seconds : step.reps),
-    unit: step.type === "time" ? "s" : "x",
-    label: step.label,
-  }));
+  return workout.steps.map((step) => {
+    if (step.type === "reps") {
+      return { amount: String(step.reps ?? step.value), unit: "x", label: step.label };
+    }
+
+    if (step.unit === "minutes") {
+      return { amount: String(step.amount ?? step.value / 60), unit: "m", label: step.label };
+    }
+
+    return { amount: String(step.seconds ?? step.value), unit: "s", label: step.label };
+  });
 }
 
 export function normalizeGeneratedWorkout(response, baseUrl) {

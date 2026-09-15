@@ -36,10 +36,13 @@ function setTextFeedback(element, message) {
   if (message) window.setTimeout(() => { element.textContent = ""; }, 2200);
 }
 
-export function mountBuilder(root) {
+export function mountBuilder(root, { editWorkout } = {}) {
   const preset = getBuilderPreset(window.location.hash);
-  let rows = preset?.rows ?? [{ amount: "30", unit: "s", label: "Work" }, { amount: "15", unit: "s", label: "Rest" }];
-  let manualBaseline = draftFingerprint(preset?.title ?? "", rows);
+  const editing = Boolean(editWorkout);
+  let rows = editing
+    ? builderRowsFromWorkout(editWorkout)
+    : preset?.rows ?? [{ amount: "30", unit: "s", label: "Work" }, { amount: "15", unit: "s", label: "Rest" }];
+  let manualBaseline = draftFingerprint(editing ? editWorkout.title : preset?.title ?? "", rows);
   document.body.classList.add("landing-page");
   root.innerHTML = `
     <main class="landing-shell">
@@ -52,11 +55,11 @@ export function mountBuilder(root) {
       <section class="builder-card" aria-labelledby="builder-card-title">
         <h2 id="builder-card-title" class="visually-hidden">Workout builder</h2>
         <div class="builder-tabs" role="tablist" aria-label="Workout builder mode">
-          <button id="ai-tab" class="builder-tab" type="button" role="tab" aria-selected="true" aria-controls="ai-panel" tabindex="0">Describe with AI</button>
-          <button id="manual-tab" class="builder-tab" type="button" role="tab" aria-selected="false" aria-controls="manual-panel" tabindex="-1">Build manually</button>
+          <button id="ai-tab" class="builder-tab" type="button" role="tab" aria-selected="${!editing}" aria-controls="ai-panel" tabindex="${editing ? "-1" : "0"}">Describe with AI</button>
+          <button id="manual-tab" class="builder-tab" type="button" role="tab" aria-selected="${editing}" aria-controls="manual-panel" tabindex="${editing ? "0" : "-1"}">Build manually</button>
         </div>
 
-        <div id="ai-panel" class="builder-panel ai-panel" role="tabpanel" aria-labelledby="ai-tab">
+        <div id="ai-panel" class="builder-panel ai-panel" role="tabpanel" aria-labelledby="ai-tab"${editing ? " hidden" : ""}>
           <form class="ai-form" novalidate>
             <label class="field-label" for="ai-prompt">What workout do you want?</label>
             <textarea id="ai-prompt" class="text-input ai-prompt" rows="5" maxlength="${MAX_PROMPT_LENGTH}" aria-describedby="ai-prompt-help ai-prompt-count" placeholder="Create a 15-minute kettlebell workout with a warm-up and short rests."></textarea>
@@ -68,8 +71,8 @@ export function mountBuilder(root) {
           <p class="ai-error" role="alert" hidden></p>
         </div>
 
-        <div id="manual-panel" class="builder-panel manual-panel" role="tabpanel" aria-labelledby="manual-tab" hidden>
-          <p class="generated-notice" role="status" tabindex="-1" hidden>Workout generated. Review or edit it before starting.</p>
+        <div id="manual-panel" class="builder-panel manual-panel" role="tabpanel" aria-labelledby="manual-tab"${editing ? "" : " hidden"}>
+          <p class="generated-notice${editing ? " edit-notice" : ""}" role="status" tabindex="-1"${editing ? "" : " hidden"}>${editing ? "Editing workout. Your changes will create a new link." : "Workout generated. Review or edit it before starting."}</p>
           <div class="manual-builder" aria-labelledby="manual-builder-title">
             <h2 id="manual-builder-title">Your workout</h2>
             <label class="field-label" for="workout-title-input">Workout title</label>
@@ -114,10 +117,11 @@ export function mountBuilder(root) {
   const assistantControls = root.querySelector(".assistant-controls");
   const assistantFeedback = root.querySelector(".assistant-feedback");
   const generation = createGenerationController(generateWorkout);
-  let activeTab = "ai";
+  let activeTab = editing ? "manual" : "ai";
 
-  titleInput.value = preset?.title ?? "";
-  window.addEventListener("pagehide", () => generation.cancel(), { once: true });
+  titleInput.value = editing ? editWorkout.title : preset?.title ?? "";
+  const cancelGeneration = () => generation.cancel();
+  window.addEventListener("pagehide", cancelGeneration, { once: true });
 
   function setActiveTab(tab, { moveFocus = false } = {}) {
     const nextIndex = tab === "manual" ? 1 : 0;
@@ -247,6 +251,8 @@ export function mountBuilder(root) {
     if (manualChanged && !window.confirm("Replace your manual workout draft with the generated workout?")) return;
     showAiError("");
     replaceManualDraft(response.workout);
+    generatedNotice.classList.remove("edit-notice");
+    generatedNotice.textContent = "Workout generated. Review or edit it before starting.";
     generatedNotice.hidden = false;
     setActiveTab("manual");
     generatedNotice.focus();
@@ -308,4 +314,15 @@ export function mountBuilder(root) {
   });
 
   renderRows();
+
+  if (editing) {
+    const notice = root.querySelector(".edit-notice");
+    notice.focus();
+    notice.scrollIntoView?.({ block: "center", behavior: "smooth" });
+  }
+
+  return () => {
+    generation.cancel();
+    window.removeEventListener("pagehide", cancelGeneration);
+  };
 }

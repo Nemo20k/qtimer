@@ -21,7 +21,8 @@ function setHidden(element, hidden) {
   element.hidden = hidden;
 }
 
-export function mountApp(root, { title, steps }, engine, { sourcePage } = {}) {
+export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } = {}) {
+  document.body.classList.remove("landing-page");
   root.innerHTML = `
     <main class="app-shell" aria-label="qtimer">
       <div class="app-layout">
@@ -112,8 +113,9 @@ export function mountApp(root, { title, steps }, engine, { sourcePage } = {}) {
         <aside class="workout-sidebar" aria-label="Workout steps">
           <div class="list-heading">
             <p class="eyebrow">WORKOUT</p>
-            <p class="sidebar-progress"></p>
+            <button class="edit-workout-button" type="button" aria-label="Edit workout"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16.5-.7 3.7 3.7-.7L18.5 8l-2.8-2.8L4 16.5Zm12.8-12.8 2.8 2.8 1-1a2 2 0 0 0-2.8-2.8l-1 1Z"></path></svg><span>Edit workout</span></button>
           </div>
+          <p class="sidebar-progress"></p>
           <ol class="workout-list"></ol>
         </aside>
       </div>
@@ -125,9 +127,21 @@ export function mountApp(root, { title, steps }, engine, { sourcePage } = {}) {
               <p class="eyebrow">WORKOUT</p>
               <p class="overlay-progress"></p>
             </div>
+            <div class="overlay-edit-slot"></div>
             <button class="overlay-close" type="button" aria-label="Close workout steps">×</button>
           </div>
           <ol class="workout-list"></ol>
+        </div>
+      </div>
+
+      <div class="edit-confirmation" hidden>
+        <div class="edit-confirmation-panel" role="dialog" aria-modal="true" aria-labelledby="edit-confirmation-title" aria-describedby="edit-confirmation-message">
+          <h2 id="edit-confirmation-title">Stop workout and edit?</h2>
+          <p id="edit-confirmation-message">Your current workout progress will be lost.</p>
+          <div class="edit-confirmation-actions">
+            <button class="secondary-button edit-cancel-button" type="button">Keep working out</button>
+            <button class="primary-button edit-confirm-button" type="button">Stop and edit</button>
+          </div>
         </div>
       </div>
     </main>
@@ -163,6 +177,12 @@ export function mountApp(root, { title, steps }, engine, { sourcePage } = {}) {
   const overlayProgress = root.querySelector(".overlay-progress");
   const mobileListButton = root.querySelector(".mobile-list-button");
   const workoutOverlay = root.querySelector(".workout-overlay");
+  const editButton = root.querySelector(".edit-workout-button");
+  const editButtonHome = root.querySelector(".list-heading");
+  const overlayEditSlot = root.querySelector(".overlay-edit-slot");
+  const editConfirmation = root.querySelector(".edit-confirmation");
+  const editCancelButton = root.querySelector(".edit-cancel-button");
+  const editConfirmButton = root.querySelector(".edit-confirm-button");
   const soundCheckbox = root.querySelector(".sound-checkbox");
   const soundText = root.querySelector(".sound-toggle span");
   const voiceCheckbox = root.querySelector(".voice-checkbox");
@@ -171,6 +191,7 @@ export function mountApp(root, { title, steps }, engine, { sourcePage } = {}) {
   let lastRenderedStepIndex = null;
   let prestartFrame = null;
   let prestartStartedAt = null;
+  let editFocusTarget = null;
   const PRESTART_DURATION_MS = 3000;
 
   titleElement.textContent = title;
@@ -314,6 +335,64 @@ export function mountApp(root, { title, steps }, engine, { sourcePage } = {}) {
     prestartStartedAt = null;
   }
 
+  function stopForEditing() {
+    stopPrestartCountdown();
+    stopAnimationLoop();
+    cancelSpeech();
+    engine.restart();
+    onEdit?.();
+  }
+
+  function closeEditConfirmation(cancelled = false) {
+    editConfirmation.hidden = true;
+    editConfirmation.removeEventListener("keydown", handleEditConfirmationKeydown);
+    if (cancelled) {
+      trackEvent("active_workout_edit_cancelled");
+      editFocusTarget?.focus();
+    }
+    editFocusTarget = null;
+  }
+
+  function handleEditConfirmationKeydown(event) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeEditConfirmation(true);
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = [editCancelButton, editConfirmButton].filter((button) => !button.disabled);
+    const index = focusable.indexOf(document.activeElement);
+    const nextIndex = event.shiftKey
+      ? (index <= 0 ? focusable.length - 1 : index - 1)
+      : (index === focusable.length - 1 ? 0 : index + 1);
+    event.preventDefault();
+    focusable[nextIndex].focus();
+  }
+
+  function openEditConfirmation() {
+    editFocusTarget = editButton;
+    editConfirmation.hidden = false;
+    editConfirmation.addEventListener("keydown", handleEditConfirmationKeydown);
+    editCancelButton.focus();
+  }
+
+  function requestEdit() {
+    trackEvent("edit_workout_clicked");
+    if (engine.status === TIMER_STATES.RUNNING || engine.status === TIMER_STATES.PAUSED) {
+      openEditConfirmation();
+      return;
+    }
+    stopForEditing();
+  }
+
+  editButton.addEventListener("click", requestEdit);
+  editCancelButton.addEventListener("click", () => closeEditConfirmation(true));
+  editConfirmButton.addEventListener("click", () => {
+    trackEvent("active_workout_edit_confirmed");
+    closeEditConfirmation();
+    stopForEditing();
+  });
+
   function runPrestartCountdown(now) {
     if (prestartStartedAt === null) return;
 
@@ -370,12 +449,14 @@ export function mountApp(root, { title, steps }, engine, { sourcePage } = {}) {
   });
 
   mobileListButton.addEventListener("click", () => {
+    overlayEditSlot.append(editButton);
     workoutOverlay.hidden = false;
     workoutOverlay.dataset.open = "true";
     render(performance.now());
   });
 
   root.querySelector(".overlay-close").addEventListener("click", () => {
+    editButtonHome.append(editButton);
     workoutOverlay.hidden = true;
     delete workoutOverlay.dataset.open;
   });
@@ -433,7 +514,7 @@ export function mountApp(root, { title, steps }, engine, { sourcePage } = {}) {
     }
   });
 
-  window.addEventListener("keydown", (event) => {
+  function handleGlobalKeydown(event) {
     if (event.target.closest?.("button, input, textarea, select, a")) return;
 
     if (event.code === "Space" && (engine.status === TIMER_STATES.RUNNING || engine.status === TIMER_STATES.PAUSED)) {
@@ -448,9 +529,18 @@ export function mountApp(root, { title, steps }, engine, { sourcePage } = {}) {
       engine.restart();
       refresh();
     }
-  });
+  }
+
+  window.addEventListener("keydown", handleGlobalKeydown);
 
   refresh();
+
+  return () => {
+    stopPrestartCountdown();
+    stopAnimationLoop();
+    cancelSpeech();
+    window.removeEventListener("keydown", handleGlobalKeydown);
+  };
 }
 
 export function renderError(root, message) {

@@ -16,7 +16,14 @@ function parseNewStep(key, label, index) {
   const validationError = validateStep(type, value, label, index);
 
   if (validationError) return { error: validationError };
-  return { step: { type, value, label } };
+  const step = { type, value, label };
+  // Keep the authored unit available to the builder without changing the
+  // runner model's existing enumerable shape.
+  Object.defineProperty(step, "unit", {
+    value: unit === "m" ? "minutes" : unit === "x" ? "reps" : "seconds",
+    enumerable: false,
+  });
+  return { step };
 }
 
 function parseLegacySteps(parameters) {
