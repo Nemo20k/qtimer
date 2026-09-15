@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { hasMeaningfulManualEdits } from "../src/builder.js";
+import { hasMeaningfulManualEdits, warningMessages } from "../src/builder.js";
 import { builderRowsFromWorkout, copyGeneratedWorkout, normalizeGeneratedWorkout, startGeneratedWorkout, workoutStepsForAnalytics } from "../src/ai-workout.js";
 import { parseTimerUrl } from "../src/parser.js";
 
@@ -21,6 +21,13 @@ test("maps generated steps into the existing builder row model", () => {
     { type: "time", value: 30, label: "Work" },
     { type: "reps", value: 8, label: "Squats" },
   ]);
+});
+
+test("maps server warning strings and metadata objects to safe user messages", () => {
+  assert.deepEqual(warningMessages([
+    "Review your form.",
+    { code: "DURATION_MISMATCH", message: "The requested duration was 5 minutes." },
+  ]), ["Review your form.", "The requested duration was 5 minutes."]);
 });
 
 test("maps a runner workout back to its authored minutes and reps", () => {

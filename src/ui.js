@@ -1,6 +1,7 @@
 import { TIMER_STATES } from "./timer-engine.js";
 import { cancelSpeech, initAudio, playBeep, playCompletionBeep, speakLabel } from "./audio.js";
 import { trackEvent, workoutParameters, workoutStartedParameters } from "./analytics.js";
+import { createWakeLockController } from "./wake-lock.js";
 
 const RING_RADIUS = 138;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
@@ -46,6 +47,11 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
               <input class="voice-checkbox" type="checkbox" checked />
               <span>Voice cues: On</span>
             </label>
+            <label class="sound-toggle wake-lock-toggle">
+              <input class="wake-lock-checkbox" type="checkbox" checked />
+              <span>Keep screen awake: On</span>
+            </label>
+            <p class="wake-lock-status" role="status" aria-live="polite" hidden></p>
           </div>
           <button class="primary-button start-button" type="button">START</button>
         </div>
@@ -187,17 +193,76 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
   const soundText = root.querySelector(".sound-toggle span");
   const voiceCheckbox = root.querySelector(".voice-checkbox");
   const voiceText = root.querySelectorAll(".sound-toggle span")[1];
+  const wakeLockCheckbox = root.querySelector(".wake-lock-checkbox");
+  const wakeLockText = root.querySelector(".wake-lock-toggle span");
+  const wakeLockStatus = root.querySelector(".wake-lock-status");
+  const wakeLockController = createWakeLockController();
   let animationFrame = null;
   let lastRenderedStepIndex = null;
   let prestartFrame = null;
   let prestartStartedAt = null;
   let editFocusTarget = null;
+  let wakeLockDesired = null;
+  let wakeLockAcquiredTracked = false;
+  let wakeLockFailureShown = false;
+  let wakeLockFailureTracked = false;
+  let wakeLockUnsupportedTracked = false;
+  let wakeLockStatusTimer = null;
   const PRESTART_DURATION_MS = 3000;
 
   titleElement.textContent = title;
   titleElement.hidden = !title;
   root.querySelector(".ready-steps").textContent = `${steps.length} step${steps.length === 1 ? "" : "s"}`;
   root.querySelector(".ready-first-label").textContent = `First: ${steps[0].label}`;
+  const wakeLockSupported = wakeLockController.isSupported();
+  wakeLockCheckbox.disabled = !wakeLockSupported;
+  if (!wakeLockSupported) wakeLockText.textContent = "Keep screen awake: Not supported by this browser";
+
+  function shouldHoldWakeLock() {
+    const workoutActive = prestartStartedAt !== null || engine.status === TIMER_STATES.RUNNING;
+    return wakeLockCheckbox.checked && workoutActive && document.visibilityState === "visible";
+  }
+
+  function showWakeLockFailure() {
+    if (wakeLockFailureShown) return;
+    wakeLockFailureShown = true;
+    wakeLockStatus.textContent = "Couldn’t keep the screen awake. Your workout will continue normally.";
+    wakeLockStatus.hidden = false;
+    clearTimeout(wakeLockStatusTimer);
+    wakeLockStatusTimer = setTimeout(() => {
+      wakeLockStatus.hidden = true;
+      wakeLockStatus.textContent = "";
+    }, 6000);
+  }
+
+  function handleWakeLockResult(result) {
+    if (result.status === "acquired") {
+      if (!wakeLockAcquiredTracked) {
+        wakeLockAcquiredTracked = true;
+        trackEvent("wake_lock_acquired");
+      }
+    } else if (result.status === "unsupported") {
+      if (!wakeLockUnsupportedTracked) {
+        wakeLockUnsupportedTracked = true;
+        trackEvent("wake_lock_unsupported");
+      }
+    } else if (result.status === "failed") {
+      if (!wakeLockFailureTracked) {
+        wakeLockFailureTracked = true;
+        trackEvent("wake_lock_failed", result.errorName ? { error_name: result.errorName } : {});
+      }
+      showWakeLockFailure();
+    }
+  }
+
+  function syncWakeLock(force = false) {
+    const shouldHold = shouldHoldWakeLock();
+    if (!force && shouldHold === wakeLockDesired) return;
+    wakeLockDesired = shouldHold;
+    void wakeLockController.sync(shouldHold).then((result) => {
+      if (shouldHold === wakeLockDesired) handleWakeLockResult(result);
+    });
+  }
 
   function stopAnimationLoop() {
     if (animationFrame !== null) {
@@ -268,6 +333,7 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
 
   function render(now) {
     const snapshot = engine.snapshot(now);
+    syncWakeLock();
     const isRunningOrPaused = snapshot.status === TIMER_STATES.RUNNING || snapshot.status === TIMER_STATES.PAUSED;
     const isTimeStep = snapshot.currentStep.type === "time";
 
@@ -439,6 +505,10 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
 
   root.querySelector(".start-button").addEventListener("click", () => {
     if (prestartStartedAt !== null) return;
+    wakeLockAcquiredTracked = false;
+    wakeLockFailureShown = false;
+    wakeLockFailureTracked = false;
+    wakeLockUnsupportedTracked = false;
     if (soundCheckbox.checked) void initAudio();
     if (voiceCheckbox.checked) speakLabel(steps[0].label);
     prestartStartedAt = performance.now();
@@ -469,6 +539,17 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
     voiceText.textContent = `Voice cues: ${voiceCheckbox.checked ? "On" : "Off"}`;
     if (!voiceCheckbox.checked) cancelSpeech();
   });
+
+  wakeLockCheckbox.addEventListener("change", () => {
+    wakeLockText.textContent = `Keep screen awake: ${wakeLockCheckbox.checked ? "On" : "Off"}`;
+    syncWakeLock(true);
+  });
+
+  function handleVisibilityChange() {
+    syncWakeLock(document.visibilityState === "visible");
+  }
+
+  document.addEventListener("visibilitychange", handleVisibilityChange);
 
   root.querySelector(".done-button").addEventListener("click", (event) => {
     event.stopPropagation();
@@ -540,6 +621,9 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
     stopAnimationLoop();
     cancelSpeech();
     window.removeEventListener("keydown", handleGlobalKeydown);
+    document.removeEventListener("visibilitychange", handleVisibilityChange);
+    clearTimeout(wakeLockStatusTimer);
+    void wakeLockController.destroy();
   };
 }
 

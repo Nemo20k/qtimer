@@ -331,6 +331,10 @@ button:disabled { cursor: wait; opacity: 0.6; transform: none; }
 .ai-error { color: #f29b8f; margin: 1rem 0 0; }
 .manual-panel { min-width: 0; }
 .manual-builder { margin: 0 auto; max-width: 42rem; }
+.workout-warning-panel { background: #332b17; border: 1px solid #b28a2d; border-radius: 0.65rem; color: #f7e4a6; margin: 0 auto 1.5rem; padding: 1rem; }
+.workout-warning-panel h2 { color: #f5c451; font-size: 1rem; margin: 0 0 0.45rem; }
+.workout-warning-panel p { line-height: 1.45; margin: 0; }
+.workout-warning-list { line-height: 1.45; margin: 0.75rem 0 0; padding-left: 1.2rem; }
 .generated-notice { background: #20261e; border: 1px solid #58694a; border-radius: 0.65rem; color: #d4e1c5; line-height: 1.45; margin: 0 auto 1.5rem; max-width: 42rem; padding: 0.8rem 1rem; }
 .edit-notice { background: #20261e; }
 .ai-assistant-section { border-top: 1px solid #272d32; margin-top: 2.5rem; padding: 2rem 0 0; text-align: center; }
@@ -468,7 +472,8 @@ button:disabled { cursor: wait; opacity: 0.6; transform: none; }
 }
 
 .sound-checkbox,
-.voice-checkbox {
+.voice-checkbox,
+.wake-lock-checkbox {
   accent-color: #f5c451;
   height: 1.1rem;
   margin: 0;
@@ -476,6 +481,20 @@ button:disabled { cursor: wait; opacity: 0.6; transform: none; }
 }
 
 .voice-checkbox { accent-color: #8ab4e8; }
+
+.wake-lock-checkbox { accent-color: #a78bfa; }
+
+.wake-lock-toggle {
+  width: max-content;
+}
+
+.wake-lock-status {
+  color: #f29b8f;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  margin: 0.15rem 0 0;
+  max-width: 18rem;
+}
 
 .paused-countdown {
   color: #ffffff;

@@ -35,6 +35,14 @@ test("models unsupported responses as a non-workout result", async () => {
   assert.deepEqual(result, { result: "unsupported", message: "Try describing a workout." });
 });
 
+test("accepts successful responses from older backends without warning metadata", async () => {
+  const legacy = { ...workout };
+  delete legacy.warnings;
+  const result = await generateWorkout("make a workout", { fetchImpl: async () => response(legacy) });
+  assert.equal(result.warnings, undefined);
+  assert.equal(result.generation, undefined);
+});
+
 test("rejects empty and overlong prompts before making a request", async () => {
   let calls = 0;
   const options = { fetchImpl: async () => { calls += 1; return response(workout); } };

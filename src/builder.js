@@ -36,6 +36,10 @@ function setTextFeedback(element, message) {
   if (message) window.setTimeout(() => { element.textContent = ""; }, 2200);
 }
 
+export function warningMessages(warnings = []) {
+  return warnings.map((warning) => typeof warning === "string" ? warning : warning?.message).filter(Boolean);
+}
+
 export function mountBuilder(root, { editWorkout } = {}) {
   const preset = getBuilderPreset(window.location.hash);
   const editing = Boolean(editWorkout);
@@ -74,6 +78,11 @@ export function mountBuilder(root, { editWorkout } = {}) {
         <div id="manual-panel" class="builder-panel manual-panel" role="tabpanel" aria-labelledby="manual-tab"${editing ? "" : " hidden"}>
           <p class="generated-notice${editing ? " edit-notice" : ""}" role="status" tabindex="-1"${editing ? "" : " hidden"}>${editing ? "Editing workout. Your changes will create a new link." : "Workout generated. Review or edit it before starting."}</p>
           <div class="manual-builder" aria-labelledby="manual-builder-title">
+            <section class="workout-warning-panel" role="status" aria-labelledby="workout-warning-title" hidden>
+              <h2 id="workout-warning-title">Workout generated with warnings</h2>
+              <p>You can still use this workout. Review or edit it before starting.</p>
+              <ul class="workout-warning-list"></ul>
+            </section>
             <h2 id="manual-builder-title">Your workout</h2>
             <label class="field-label" for="workout-title-input">Workout title</label>
             <input id="workout-title-input" class="text-input title-input" maxlength="${WORKOUT_LIMITS.maxTitleLength}" placeholder="Optional title" />
@@ -108,6 +117,8 @@ export function mountBuilder(root, { editWorkout } = {}) {
   const titleInput = root.querySelector(".title-input");
   const errorElement = root.querySelector(".builder-error");
   const generatedNotice = root.querySelector(".generated-notice");
+  const warningPanel = root.querySelector(".workout-warning-panel");
+  const warningList = root.querySelector(".workout-warning-list");
   const aiPrompt = root.querySelector(".ai-prompt");
   const aiForm = root.querySelector(".ai-form");
   const aiSubmitButton = root.querySelector(".ai-submit-button");
@@ -159,12 +170,12 @@ export function mountBuilder(root, { editWorkout } = {}) {
       amount.value = row.amount;
       unit.value = row.unit;
       label.value = row.label;
-      amount.addEventListener("input", () => { row.amount = amount.value; });
-      unit.addEventListener("change", () => { row.unit = unit.value; });
-      label.addEventListener("input", () => { row.label = label.value; });
+      amount.addEventListener("input", () => { row.amount = amount.value; clearGeneratedWarnings(); });
+      unit.addEventListener("change", () => { row.unit = unit.value; clearGeneratedWarnings(); });
+      label.addEventListener("input", () => { row.label = label.value; clearGeneratedWarnings(); });
       const remove = element.querySelector(".remove-step-button");
       remove.disabled = rows.length === 1;
-      remove.addEventListener("click", () => { rows.splice(index, 1); renderRows(); });
+      remove.addEventListener("click", () => { rows.splice(index, 1); clearGeneratedWarnings(); renderRows(); });
       rowsElement.append(element);
     });
   }
@@ -205,6 +216,22 @@ export function mountBuilder(root, { editWorkout } = {}) {
     aiError.hidden = !message;
   }
 
+  function clearGeneratedWarnings() {
+    warningPanel.hidden = true;
+    warningList.replaceChildren();
+  }
+
+  function showGeneratedWarnings(warnings) {
+    const messages = warningMessages(warnings);
+    warningList.replaceChildren(...messages.map((message) => {
+      const item = document.createElement("li");
+      item.textContent = message;
+      return item;
+    }));
+    warningPanel.hidden = messages.length === 0;
+    if (messages.length > 0) trackEvent("workout_generation_warning_shown");
+  }
+
   function replaceManualDraft(workout) {
     titleInput.value = workout.title;
     rows = builderRowsFromWorkout(workout);
@@ -216,6 +243,7 @@ export function mountBuilder(root, { editWorkout } = {}) {
   async function submitAiPrompt(event) {
     event.preventDefault();
     if (generation.loading) return;
+    clearGeneratedWarnings();
     trackEvent("ai_generate_submitted");
     const resultPromise = generation.submit(aiPrompt.value);
     if (generation.loading) {
@@ -256,6 +284,8 @@ export function mountBuilder(root, { editWorkout } = {}) {
     generatedNotice.hidden = false;
     setActiveTab("manual");
     generatedNotice.focus();
+    showGeneratedWarnings(response.warnings);
+    if (response.generation?.repairAttempted) trackEvent("workout_generation_repaired");
     trackEvent("ai_generate_succeeded", workoutParameters(workoutStepsForAnalytics(response.workout)));
   }
 
@@ -276,6 +306,7 @@ export function mountBuilder(root, { editWorkout } = {}) {
     aiPromptCount.textContent = `${aiPrompt.value.length.toLocaleString()} / ${MAX_PROMPT_LENGTH.toLocaleString()}`;
     if (aiError.textContent) showAiError("");
   });
+  titleInput.addEventListener("input", clearGeneratedWarnings);
   aiPrompt.addEventListener("keydown", (event) => {
     if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); aiForm.requestSubmit(); }
   });
@@ -284,6 +315,7 @@ export function mountBuilder(root, { editWorkout } = {}) {
   root.querySelector(".add-step-button").addEventListener("click", () => {
     if (rows.length >= WORKOUT_LIMITS.maxSteps) return;
     rows.push({ amount: "30", unit: "s", label: "Work" });
+    clearGeneratedWarnings();
     renderRows();
     rowsElement.lastElementChild.querySelector(".label-input").focus();
   });

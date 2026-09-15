@@ -4,7 +4,9 @@ export const MAX_PROMPT_LENGTH = 2_000;
 /**
  * @typedef {{ type: "time", seconds: number, label: string } | { type: "reps", reps: number, label: string }} ApiWorkoutStep
  * @typedef {{ title: string, steps: ApiWorkoutStep[] }} ApiWorkout
- * @typedef {{ result: "workout", mode: "generated" | "converted", workout: ApiWorkout, warnings: string[], url: string }} WorkoutResponse
+ * @typedef {{ code: "DURATION_MISMATCH" | "DURATION_NOT_VERIFIABLE" | "DURATION_APPROXIMATE", message: string }} WorkoutWarning
+ * @typedef {{ repairAttempted: boolean, repairSucceeded: boolean, requestedDurationSeconds: number | null, timedDurationSeconds: number, hasRepSteps: boolean }} GenerationMetadata
+ * @typedef {{ result: "workout", mode: "generated" | "converted", workout: ApiWorkout, warnings?: (string | WorkoutWarning)[], generation?: GenerationMetadata, url: string }} WorkoutResponse
  * @typedef {{ result: "unsupported" | "unsafe", message: string }} NonWorkoutResponse
  * @typedef {WorkoutResponse | NonWorkoutResponse} GenerateWorkoutResponse
  * @typedef {{ code: "invalid_request" | "rate_limited" | "invalid_ai_response" | "provider_unavailable" | "workout_url_too_long" | "not_found" | "method_not_allowed", message: string }} ApiErrorBody
@@ -31,6 +33,22 @@ function isWorkoutStep(value) {
   return false;
 }
 
+function isWarning(value) {
+  return typeof value === "string"
+    || (isRecord(value)
+      && ["DURATION_MISMATCH", "DURATION_NOT_VERIFIABLE", "DURATION_APPROXIMATE"].includes(value.code)
+      && typeof value.message === "string");
+}
+
+function isGenerationMetadata(value) {
+  return isRecord(value)
+    && typeof value.repairAttempted === "boolean"
+    && typeof value.repairSucceeded === "boolean"
+    && (value.requestedDurationSeconds === null || typeof value.requestedDurationSeconds === "number")
+    && Number.isFinite(value.timedDurationSeconds)
+    && typeof value.hasRepSteps === "boolean";
+}
+
 function isGenerateWorkoutResponse(value) {
   if (!isRecord(value) || typeof value.result !== "string") return false;
   if (value.result === "unsupported" || value.result === "unsafe") return typeof value.message === "string" && value.message.length > 0;
@@ -41,8 +59,8 @@ function isGenerateWorkoutResponse(value) {
     && Array.isArray(value.workout.steps)
     && value.workout.steps.length > 0
     && value.workout.steps.every(isWorkoutStep)
-    && Array.isArray(value.warnings)
-    && value.warnings.every((warning) => typeof warning === "string")
+    && (value.warnings === undefined || (Array.isArray(value.warnings) && value.warnings.every(isWarning)))
+    && (value.generation === undefined || isGenerationMetadata(value.generation))
     && typeof value.url === "string"
     && value.url.length > 0;
 }

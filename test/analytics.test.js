@@ -52,7 +52,7 @@ test("AI analytics events contain no prompt, workout content, or API body", () =
   globalThis.gtag = (...args) => calls.push(args);
 
   try {
-    for (const name of ["ai_generate_submitted", "ai_generate_started", "ai_generate_succeeded", "ai_generate_failed", "builder_tab_changed", "ai_workout_started", "ai_workout_copied", "ai_workout_edited"]) {
+    for (const name of ["ai_generate_submitted", "ai_generate_started", "ai_generate_succeeded", "ai_generate_failed", "builder_tab_changed", "ai_workout_started", "ai_workout_copied", "ai_workout_edited", "workout_generation_repaired", "workout_generation_warning_shown"]) {
       trackEvent(name, { step_count: 2 });
     }
     const serialized = JSON.stringify(calls);
