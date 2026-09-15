@@ -3,21 +3,10 @@ import { cancelSpeech, initAudio, playBeep, playCompletionBeep, speakLabel } fro
 import { trackEvent, workoutParameters, workoutStartedParameters } from "./analytics.js";
 import { createWakeLockController } from "./wake-lock.js";
 import { siteFooterMarkup } from "./site-footer.js";
+import { formatAccessibleDuration, formatDuration, workoutSummary } from "./workout-totals.js";
 
 const RING_RADIUS = 138;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
-
-function formatDuration(milliseconds) {
-  const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = totalSeconds % 60;
-  const pad = (value) => String(value).padStart(2, "0");
-
-  return hours > 0
-    ? `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
-    : `${pad(minutes)}:${pad(seconds)}`;
-}
 
 function setHidden(element, hidden) {
   element.hidden = hidden;
@@ -38,6 +27,7 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
         <div class="ready-view">
           <p class="eyebrow">READY TO BEGIN</p>
           <p class="ready-steps"></p>
+          <p class="ready-duration-note" hidden>Duration varies by pace</p>
           <p class="ready-first-label"></p>
           <div class="ready-cues">
             <label class="sound-toggle">
@@ -113,7 +103,10 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
       </section>
 
           <footer class="workout-footer">
-            <p class="workout-elapsed"></p>
+            <p class="workout-elapsed">
+              <span class="workout-total-label"></span>
+              <span class="workout-total-value"></span>
+            </p>
           </footer>
           <div class="mobile-workout-actions">
             <button class="mobile-list-button" type="button"></button>
@@ -178,6 +171,8 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
   const repCount = root.querySelector(".rep-count");
   const doneButton = root.querySelector(".done-button");
   const workoutElapsed = root.querySelector(".workout-elapsed");
+  const workoutTotalLabel = root.querySelector(".workout-total-label");
+  const workoutTotalValue = root.querySelector(".workout-total-value");
   const pausedLabel = root.querySelector(".paused-label");
   const pausedCountdown = root.querySelector(".paused-countdown");
   const pausedRingProgress = root.querySelector(".paused-ring .ring-progress");
@@ -218,7 +213,9 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
 
   titleElement.textContent = title;
   titleElement.hidden = !title;
-  root.querySelector(".ready-steps").textContent = `${steps.length} step${steps.length === 1 ? "" : "s"}`;
+  const summary = workoutSummary(steps);
+  root.querySelector(".ready-steps").textContent = summary?.text ?? "";
+  root.querySelector(".ready-duration-note").hidden = !summary?.variesByPace;
   root.querySelector(".ready-first-label").textContent = `First: ${steps[0].label}`;
   const wakeLockSupported = wakeLockController.isSupported();
   wakeLockCheckbox.disabled = !wakeLockSupported;
@@ -337,6 +334,21 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
     }
   }
 
+  function renderWorkoutTotal(snapshot) {
+    if (snapshot.status === TIMER_STATES.READY) {
+      workoutTotalLabel.textContent = "";
+      workoutTotalValue.textContent = "";
+      workoutTotalValue.removeAttribute("aria-label");
+      return;
+    }
+
+    const isKnownTotal = snapshot.totalRemainingMs !== null;
+    const seconds = isKnownTotal ? snapshot.totalRemainingMs / 1000 : snapshot.workoutElapsedMs / 1000;
+    workoutTotalLabel.textContent = isKnownTotal ? "TOTAL LEFT" : "ELAPSED";
+    workoutTotalValue.textContent = formatDuration(seconds, { padMinutes: true });
+    workoutTotalValue.setAttribute("aria-label", formatAccessibleDuration(seconds, isKnownTotal ? "remaining" : "elapsed"));
+  }
+
   function render(now) {
     const snapshot = engine.snapshot(now);
     syncWakeLock();
@@ -348,6 +360,7 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
     processNarrationEvents(events);
     processAnalyticsEvents(events);
     renderStepLists(snapshot);
+    renderWorkoutTotal(snapshot);
 
     appShell.dataset.state = prestartStartedAt !== null ? "prestart" : snapshot.status.toLowerCase();
     statusText.textContent = snapshot.status === TIMER_STATES.PAUSED ? "PAUSED" : "COMPLETE";
@@ -371,13 +384,12 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
       timeStepView.hidden = !isTimeStep;
       repStepView.hidden = isTimeStep;
       doneButton.classList.toggle("is-hidden", isTimeStep);
-      countdown.textContent = formatDuration(snapshot.currentRemainingMs ?? 0);
-      countdown.setAttribute("aria-label", `${formatDuration(snapshot.currentRemainingMs ?? 0)} remaining`);
+      countdown.textContent = formatDuration((snapshot.currentRemainingMs ?? 0) / 1000, { padMinutes: true });
+      countdown.setAttribute("aria-label", formatAccessibleDuration((snapshot.currentRemainingMs ?? 0) / 1000, "remaining"));
       repCount.textContent = snapshot.currentStep.value;
-      workoutElapsed.textContent = `ELAPSED ${formatDuration(snapshot.workoutElapsedMs)}`;
 
       pausedLabel.textContent = snapshot.currentStep.label;
-      pausedCountdown.textContent = isTimeStep ? formatDuration(snapshot.currentRemainingMs) : "";
+      pausedCountdown.textContent = isTimeStep ? formatDuration(snapshot.currentRemainingMs / 1000, { padMinutes: true }) : "";
       pausedReps.textContent = isTimeStep ? "" : `${snapshot.currentStep.value} REPS`;
       const ringOffset = `${RING_CIRCUMFERENCE * (1 - snapshot.currentProgress)}`;
       ringProgress.style.strokeDashoffset = ringOffset;
@@ -385,8 +397,7 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
     }
 
     if (snapshot.status === TIMER_STATES.COMPLETED) {
-      completedSummary.textContent = `${snapshot.totalSteps} step${snapshot.totalSteps === 1 ? "" : "s"} · ${formatDuration(snapshot.workoutElapsedMs)}`;
-      workoutElapsed.textContent = `ELAPSED ${formatDuration(snapshot.workoutElapsedMs)}`;
+      completedSummary.textContent = `${snapshot.totalSteps} step${snapshot.totalSteps === 1 ? "" : "s"} · ${formatDuration(snapshot.workoutElapsedMs / 1000, { padMinutes: true })}`;
     }
 
     if (snapshot.status === TIMER_STATES.RUNNING) {

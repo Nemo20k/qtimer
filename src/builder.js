@@ -1,11 +1,12 @@
 import { generateWorkout, MAX_PROMPT_LENGTH, ApiClientError } from "./api-client.js";
 import { createGenerationController } from "./ai-generator.js";
-import { modelFromBuilderRows, serializeWorkout, WORKOUT_LIMITS } from "./workout.js";
+import { modelFromBuilderRows, serializeWorkout, validateWorkout, WORKOUT_LIMITS } from "./workout.js";
 import { trackEvent, workoutParameters } from "./analytics.js";
 import { getBuilderPreset } from "./landing-pages.js";
 import { builderRowsFromWorkout, normalizeGeneratedWorkout, workoutStepsForAnalytics } from "./ai-workout.js";
 import { copyAssistantInstructions, getAssistantInstructions, ASSISTANT_PROVIDERS } from "./ai-assistant.js";
 import { siteFooterMarkup } from "./site-footer.js";
+import { formatNaturalDuration, workoutSummary } from "./workout-totals.js";
 
 const EXAMPLE_PROMPTS = [
   "Create a 15-minute kettlebell workout with a warm-up and short rests.",
@@ -89,6 +90,11 @@ export function mountBuilder(root, { editWorkout } = {}) {
             <input id="workout-title-input" class="text-input title-input" maxlength="${WORKOUT_LIMITS.maxTitleLength}" placeholder="Optional title" />
             <div class="builder-column-labels" aria-hidden="true"><span>Amount</span><span>Unit</span><span>Label</span><span></span></div>
             <div class="builder-rows"></div>
+            <div class="builder-summary" aria-live="polite">
+              <p class="builder-summary-text"></p>
+              <p class="builder-duration-note" hidden>Duration varies by pace</p>
+              <p class="builder-target-note" hidden></p>
+            </div>
             <button class="add-step-button" type="button">+ Add step</button>
             <p class="builder-error" role="alert" hidden></p>
             <button class="primary-button start-workout-button" type="button">Start workout</button>
@@ -129,8 +135,12 @@ export function mountBuilder(root, { editWorkout } = {}) {
   const aiPromptCount = root.querySelector(".ai-prompt-count");
   const assistantControls = root.querySelector(".assistant-controls");
   const assistantFeedback = root.querySelector(".assistant-feedback");
+  const summaryText = root.querySelector(".builder-summary-text");
+  const durationNote = root.querySelector(".builder-duration-note");
+  const targetNote = root.querySelector(".builder-target-note");
   const generation = createGenerationController(generateWorkout);
   let activeTab = editing ? "manual" : "ai";
+  let generationMetadata = null;
 
   titleInput.value = editing ? editWorkout.title : preset?.title ?? "";
   const cancelGeneration = () => generation.cancel();
@@ -180,6 +190,21 @@ export function mountBuilder(root, { editWorkout } = {}) {
       remove.addEventListener("click", () => { rows.splice(index, 1); clearGeneratedWarnings(); renderRows(); });
       rowsElement.append(element);
     });
+    renderSummary();
+  }
+
+  function renderSummary() {
+    const model = modelFromBuilderRows(titleInput.value, rows);
+    const summary = validateWorkout(model) ? null : workoutSummary(model.steps);
+    summaryText.textContent = summary?.text ?? "";
+    summaryText.hidden = !summary;
+    durationNote.hidden = !summary?.variesByPace;
+    const requested = generationMetadata?.requestedDurationSeconds;
+    const showTarget = summary?.variesByPace && Number.isFinite(requested) && requested > 0;
+    targetNote.textContent = showTarget
+      ? `Target: ~${formatNaturalDuration(requested)} · actual duration depends on your pace`
+      : "";
+    targetNote.hidden = !showTarget;
   }
 
   const baseUrl = `${window.location.origin}${window.location.pathname}`;
@@ -219,8 +244,10 @@ export function mountBuilder(root, { editWorkout } = {}) {
   }
 
   function clearGeneratedWarnings() {
+    generationMetadata = null;
     warningPanel.hidden = true;
     warningList.replaceChildren();
+    renderSummary();
   }
 
   function showGeneratedWarnings(warnings) {
@@ -281,6 +308,8 @@ export function mountBuilder(root, { editWorkout } = {}) {
     if (manualChanged && !window.confirm("Replace your manual workout draft with the generated workout?")) return;
     showAiError("");
     replaceManualDraft(response.workout);
+    generationMetadata = response.generation ?? null;
+    renderSummary();
     generatedNotice.classList.remove("edit-notice");
     generatedNotice.textContent = "Workout generated. Review or edit it before starting.";
     generatedNotice.hidden = false;

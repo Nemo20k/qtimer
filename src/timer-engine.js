@@ -1,3 +1,5 @@
+import { calculateWorkoutTotals } from "./workout-totals.js";
+
 export const TIMER_STATES = Object.freeze({
   READY: "READY",
   RUNNING: "RUNNING",
@@ -14,6 +16,7 @@ export class TimerEngine {
     }
 
     this.steps = steps;
+    this.totals = calculateWorkoutTotals(steps);
     this.clock = clock;
     this.status = TIMER_STATES.READY;
     this.currentStepIndex = 0;
@@ -197,8 +200,22 @@ export class TimerEngine {
       currentProgress: isTimeStep && this.status !== TIMER_STATES.COMPLETED
         ? Math.min(1, this.currentElapsedMs / durationMs)
         : 0,
+      totalRemainingMs: this.totalRemainingMs(),
       totalSteps: this.steps.length,
     };
+  }
+
+  totalRemainingMs() {
+    if (!this.totals.hasKnownTotalDuration) return null;
+    if (this.status === TIMER_STATES.COMPLETED) return 0;
+
+    const currentRemaining = this.currentStep.type === "time"
+      ? Math.max(0, this.currentStep.value * 1000 - this.currentElapsedMs)
+      : 0;
+    const laterSeconds = this.steps
+      .slice(this.currentStepIndex + 1)
+      .reduce((total, step) => total + (step.type === "time" ? step.value : 0), 0);
+    return currentRemaining + laterSeconds * 1000;
   }
 
   get currentStep() {

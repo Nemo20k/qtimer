@@ -87,6 +87,44 @@ test("elapsed workout time pauses and resumes accurately", () => {
   assert.equal(engine.snapshot().workoutElapsedMs, 4500);
 });
 
+test("tracks total remaining time for fully timed workouts", () => {
+  const { engine, advance } = setup([
+    { type: "time", value: 10, label: "Work" },
+    { type: "time", value: 5, label: "Rest" },
+  ]);
+
+  assert.equal(engine.snapshot().totalRemainingMs, 15000);
+  engine.start();
+  engine.consumeEvents();
+  advance(3500);
+  assert.equal(engine.snapshot().totalRemainingMs, 11500);
+  engine.pause();
+  advance(5000);
+  assert.equal(engine.snapshot().totalRemainingMs, 11500);
+  engine.resume();
+  advance(6500);
+  assert.equal(engine.snapshot().totalRemainingMs, 5000);
+  engine.goToPreviousStep();
+  assert.equal(engine.snapshot().totalRemainingMs, 15000);
+  engine.goToNextStep();
+  assert.equal(engine.snapshot().totalRemainingMs, 5000);
+  advance(5000);
+  assert.equal(engine.snapshot().status, TIMER_STATES.COMPLETED);
+  assert.equal(engine.snapshot().totalRemainingMs, 0);
+  engine.restart();
+  assert.equal(engine.snapshot().totalRemainingMs, 15000);
+});
+
+test("does not estimate remaining time for mixed or repetition-only workouts", () => {
+  const mixed = setup([
+    { type: "time", value: 10, label: "Work" },
+    { type: "reps", value: 5, label: "Push-ups" },
+  ]).engine;
+  const repetitions = setup([{ type: "reps", value: 5, label: "Push-ups" }]).engine;
+  assert.equal(mixed.snapshot().totalRemainingMs, null);
+  assert.equal(repetitions.snapshot().totalRemainingMs, null);
+});
+
 test("pause and resume are idempotent and preserve the exact step position", () => {
   const { engine, advance } = setup();
 
