@@ -174,6 +174,10 @@ p {
   width: 0.9rem;
 }
 
+.mobile-workout-actions {
+  display: none;
+}
+
 .sidebar-progress,
 .overlay-progress {
   color: #8c949d;
@@ -770,33 +774,39 @@ code {
   }
 
   .workout-sidebar {
-    border: 0;
-    display: block;
-    margin: 0;
-    min-width: 0;
-    order: 0;
-    padding: 0;
-  }
-
-  .workout-sidebar .list-heading {
-    justify-content: flex-end;
-  }
-
-  .workout-sidebar .sidebar-progress,
-  .workout-sidebar > .workout-list {
     display: none;
   }
 
-  .mobile-list-button {
+  .mobile-workout-actions {
+    display: grid;
+    gap: 0.5rem;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    margin: 0 auto 0.25rem;
+    width: min(100%, 20rem);
+  }
+
+  .mobile-workout-actions button {
+    align-items: center;
     background: transparent;
     border: 1px solid #333a41;
     color: #b5bbc1;
-    display: block;
+    display: inline-flex;
     font-size: 0.78rem;
+    justify-content: center;
     letter-spacing: 0.04em;
-    margin: 0 auto 0.25rem;
-    min-height: 42px;
-    padding: 0 1rem;
+    margin: 0;
+    min-height: 44px;
+    min-width: 0;
+    padding-inline: 0.5rem;
+    white-space: nowrap;
+  }
+
+  .mobile-workout-actions .edit-workout-button {
+    gap: 0.4rem;
+  }
+
+  .mobile-workout-actions .mobile-list-button {
+    display: inline-flex;
   }
 
   .step-navigation {

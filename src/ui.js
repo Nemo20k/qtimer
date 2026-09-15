@@ -113,7 +113,10 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
           <footer class="workout-footer">
             <p class="workout-elapsed"></p>
           </footer>
-          <button class="mobile-list-button" type="button"></button>
+          <div class="mobile-workout-actions">
+            <button class="mobile-list-button" type="button"></button>
+            <button class="edit-workout-button mobile-edit-workout-button" type="button" aria-label="Edit workout"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 16.5-.7 3.7 3.7-.7L18.5 8l-2.8-2.8L4 16.5Zm12.8-12.8 2.8 2.8 1-1a2 2 0 0 0-2.8-2.8l-1 1Z"></path></svg><span>Edit workout</span></button>
+          </div>
         </div>
 
         <aside class="workout-sidebar" aria-label="Workout steps">
@@ -133,7 +136,6 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
               <p class="eyebrow">WORKOUT</p>
               <p class="overlay-progress"></p>
             </div>
-            <div class="overlay-edit-slot"></div>
             <button class="overlay-close" type="button" aria-label="Close workout steps">×</button>
           </div>
           <ol class="workout-list"></ol>
@@ -183,9 +185,7 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
   const overlayProgress = root.querySelector(".overlay-progress");
   const mobileListButton = root.querySelector(".mobile-list-button");
   const workoutOverlay = root.querySelector(".workout-overlay");
-  const editButton = root.querySelector(".edit-workout-button");
-  const editButtonHome = root.querySelector(".list-heading");
-  const overlayEditSlot = root.querySelector(".overlay-edit-slot");
+  const editButtons = root.querySelectorAll(".edit-workout-button");
   const editConfirmation = root.querySelector(".edit-confirmation");
   const editCancelButton = root.querySelector(".edit-cancel-button");
   const editConfirmButton = root.querySelector(".edit-confirm-button");
@@ -435,23 +435,23 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
     focusable[nextIndex].focus();
   }
 
-  function openEditConfirmation() {
-    editFocusTarget = editButton;
+  function openEditConfirmation(button) {
+    editFocusTarget = button;
     editConfirmation.hidden = false;
     editConfirmation.addEventListener("keydown", handleEditConfirmationKeydown);
     editCancelButton.focus();
   }
 
-  function requestEdit() {
+  function requestEdit(event) {
     trackEvent("edit_workout_clicked");
     if (engine.status === TIMER_STATES.RUNNING || engine.status === TIMER_STATES.PAUSED) {
-      openEditConfirmation();
+      openEditConfirmation(event.currentTarget);
       return;
     }
     stopForEditing();
   }
 
-  editButton.addEventListener("click", requestEdit);
+  editButtons.forEach((button) => button.addEventListener("click", requestEdit));
   editCancelButton.addEventListener("click", () => closeEditConfirmation(true));
   editConfirmButton.addEventListener("click", () => {
     trackEvent("active_workout_edit_confirmed");
@@ -519,14 +519,12 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
   });
 
   mobileListButton.addEventListener("click", () => {
-    overlayEditSlot.append(editButton);
     workoutOverlay.hidden = false;
     workoutOverlay.dataset.open = "true";
     render(performance.now());
   });
 
   root.querySelector(".overlay-close").addEventListener("click", () => {
-    editButtonHome.append(editButton);
     workoutOverlay.hidden = true;
     delete workoutOverlay.dataset.open;
   });
