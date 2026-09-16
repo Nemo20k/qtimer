@@ -73,7 +73,7 @@ export function mountBuilder(root, { editWorkout } = {}) {
             <div class="ai-examples" aria-label="Example prompts"></div>
             <button class="primary-button ai-submit-button" type="submit">Generate workout</button>
           </form>
-          <p class="ai-loading" aria-live="polite" hidden>Generating workout…</p>
+          <p class="ai-loading" aria-live="polite" hidden>Generating workout<span class="ai-loading-dots" aria-hidden="true"><span class="ai-loading-dot">.</span><span class="ai-loading-dot">.</span><span class="ai-loading-dot">.</span></span></p>
           <p class="ai-error" role="alert" hidden></p>
         </div>
 

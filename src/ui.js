@@ -53,10 +53,10 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
           <p class="prestart-countdown">3</p>
         </div>
 
-        <div class="running-view">
-          <div class="period-count" aria-live="polite"></div>
+        <div class="active-view">
+          <div class="period-count active-status" aria-live="polite"></div>
           <p class="current-label"></p>
-          <div class="main-display">
+          <div class="timer-stage">
             <div class="countdown-wrap">
               <svg class="progress-ring" viewBox="0 0 320 320" aria-hidden="true">
                 <circle class="ring-track" cx="160" cy="160" r="${RING_RADIUS}"></circle>
@@ -70,27 +70,13 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
             </div>
           </div>
           <div class="done-slot"><button class="primary-button done-button" type="button">DONE</button></div>
-          <button class="secondary-button pause-button" type="button" aria-label="Pause workout">PAUSE</button>
           <nav class="step-navigation" aria-label="Step navigation">
             <button class="secondary-button previous-button" type="button" aria-label="Previous step"><span class="nav-arrow" aria-hidden="true">←</span><span class="nav-text"> Previous</span></button>
+            <button class="secondary-button pause-button" type="button" aria-label="Pause workout">PAUSE</button>
             <button class="secondary-button next-button" type="button" aria-label="Next step"><span class="nav-text">Next </span><span class="nav-arrow" aria-hidden="true">→</span></button>
           </nav>
           <p class="tap-hint">Tap the background to pause</p>
-        </div>
-
-        <div class="paused-view">
-          <p class="eyebrow state-label">PAUSED</p>
-          <p class="paused-label"></p>
-          <div class="paused-display"><svg class="progress-ring paused-ring" viewBox="0 0 320 320" aria-hidden="true"><circle class="ring-track" cx="160" cy="160" r="${RING_RADIUS}"></circle><circle class="ring-progress" cx="160" cy="160" r="${RING_RADIUS}"></circle></svg><p class="paused-countdown"></p></div>
-          <p class="paused-reps"></p>
-          <nav class="step-navigation" aria-label="Step navigation">
-            <button class="secondary-button previous-button" type="button" aria-label="Previous step"><span class="nav-arrow" aria-hidden="true">←</span><span class="nav-text"> Previous</span></button>
-            <button class="secondary-button next-button" type="button" aria-label="Next step"><span class="nav-text">Next </span><span class="nav-arrow" aria-hidden="true">→</span></button>
-          </nav>
-          <div class="button-row">
-            <button class="primary-button resume-button" type="button">RESUME</button>
-            <button class="secondary-button paused-restart-button" type="button">RESTART</button>
-          </div>
+          <div class="restart-slot"><button class="secondary-button active-restart-button" type="button">RESTART</button></div>
         </div>
 
         <div class="completed-view">
@@ -156,8 +142,7 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
   const titleElement = root.querySelector("#workout-title");
   const readyView = root.querySelector(".ready-view");
   const prestartView = root.querySelector(".prestart-view");
-  const runningView = root.querySelector(".running-view");
-  const pausedView = root.querySelector(".paused-view");
+  const activeView = root.querySelector(".active-view");
   const completedView = root.querySelector(".completed-view");
   const stepNavigations = root.querySelectorAll(".step-navigation");
   const previousButtons = root.querySelectorAll(".previous-button");
@@ -170,17 +155,14 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
   const ringProgress = root.querySelector(".ring-progress");
   const repCount = root.querySelector(".rep-count");
   const doneButton = root.querySelector(".done-button");
+  const tapHint = root.querySelector(".tap-hint");
   const workoutElapsed = root.querySelector(".workout-elapsed");
   const workoutTotalLabel = root.querySelector(".workout-total-label");
   const workoutTotalValue = root.querySelector(".workout-total-value");
-  const pausedLabel = root.querySelector(".paused-label");
-  const pausedCountdown = root.querySelector(".paused-countdown");
-  const pausedRingProgress = root.querySelector(".paused-ring .ring-progress");
-  const pausedReps = root.querySelector(".paused-reps");
   const completedSummary = root.querySelector(".completed-summary");
   const pauseButton = root.querySelector(".pause-button");
-  const resumeButton = root.querySelector(".resume-button");
-  const statusText = root.querySelector(".state-label");
+  const activeRestartButton = root.querySelector(".active-restart-button");
+  const statusText = root.querySelector(".completed-view .state-label");
   const listContainers = root.querySelectorAll(".workout-list");
   const sidebarProgress = root.querySelector(".sidebar-progress");
   const overlayProgress = root.querySelector(".overlay-progress");
@@ -363,37 +345,35 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
     renderWorkoutTotal(snapshot);
 
     appShell.dataset.state = prestartStartedAt !== null ? "prestart" : snapshot.status.toLowerCase();
-    statusText.textContent = snapshot.status === TIMER_STATES.PAUSED ? "PAUSED" : "COMPLETE";
+    statusText.textContent = "COMPLETE";
     setHidden(readyView, snapshot.status !== TIMER_STATES.READY || prestartStartedAt !== null);
     setHidden(prestartView, prestartStartedAt === null);
-    setHidden(runningView, snapshot.status !== TIMER_STATES.RUNNING);
-    setHidden(pausedView, snapshot.status !== TIMER_STATES.PAUSED);
+    setHidden(activeView, !isRunningOrPaused);
     setHidden(completedView, snapshot.status !== TIMER_STATES.COMPLETED);
-    for (const navigation of stepNavigations) {
-      setHidden(navigation, navigation.closest(".running-view")
-        ? snapshot.status !== TIMER_STATES.RUNNING
-        : snapshot.status !== TIMER_STATES.PAUSED);
-    }
+    for (const navigation of stepNavigations) setHidden(navigation, !isRunningOrPaused);
     for (const button of previousButtons) button.disabled = snapshot.currentStepIndex === 0;
     setHidden(workoutElapsed, snapshot.status === TIMER_STATES.READY);
     mobileListButton.textContent = `${snapshot.currentStepNumber} / ${snapshot.totalSteps} · View workout`;
 
     if (isRunningOrPaused) {
-      runningPeriodCount.textContent = `${snapshot.currentStepNumber} / ${snapshot.totalSteps}`;
+      runningPeriodCount.textContent = `${snapshot.status === TIMER_STATES.PAUSED ? "PAUSED · " : ""}${snapshot.currentStepNumber} / ${snapshot.totalSteps}`;
       currentLabel.textContent = snapshot.currentStep.label;
+      currentLabel.setAttribute("aria-label", snapshot.currentStep.label);
       timeStepView.hidden = !isTimeStep;
       repStepView.hidden = isTimeStep;
       doneButton.classList.toggle("is-hidden", isTimeStep);
+      pauseButton.textContent = snapshot.status === TIMER_STATES.PAUSED ? "RESUME" : "PAUSE";
+      pauseButton.setAttribute("aria-label", snapshot.status === TIMER_STATES.PAUSED ? "Resume workout" : "Pause workout");
+      activeRestartButton.style.visibility = snapshot.status === TIMER_STATES.PAUSED ? "visible" : "hidden";
+      activeRestartButton.style.pointerEvents = snapshot.status === TIMER_STATES.PAUSED ? "auto" : "none";
+      tapHint.style.visibility = snapshot.status === TIMER_STATES.RUNNING ? "visible" : "hidden";
       countdown.textContent = formatDuration((snapshot.currentRemainingMs ?? 0) / 1000, { padMinutes: true });
       countdown.setAttribute("aria-label", formatAccessibleDuration((snapshot.currentRemainingMs ?? 0) / 1000, "remaining"));
+      countdown.classList.toggle("countdown-long", countdown.textContent.length > 5);
       repCount.textContent = snapshot.currentStep.value;
-
-      pausedLabel.textContent = snapshot.currentStep.label;
-      pausedCountdown.textContent = isTimeStep ? formatDuration(snapshot.currentRemainingMs / 1000, { padMinutes: true }) : "";
-      pausedReps.textContent = isTimeStep ? "" : `${snapshot.currentStep.value} REPS`;
       const ringOffset = `${RING_CIRCUMFERENCE * (1 - snapshot.currentProgress)}`;
       ringProgress.style.strokeDashoffset = ringOffset;
-      pausedRingProgress.style.strokeDashoffset = ringOffset;
+      ringProgress.classList.toggle("is-paused", snapshot.status === TIMER_STATES.PAUSED);
     }
 
     if (snapshot.status === TIMER_STATES.COMPLETED) {
@@ -528,7 +508,7 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
     engine.pause();
     trackEvent("workout_paused", { interaction_source: source });
     refresh();
-    if (source === "button" || source === "keyboard") resumeButton.focus();
+    if (source === "keyboard") pauseButton.focus({ preventScroll: true });
   }
 
   function resumeWorkout(source) {
@@ -536,7 +516,7 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
     engine.resume();
     trackEvent("workout_resumed", { interaction_source: source });
     refresh();
-    if (source === "button" || source === "keyboard") pauseButton.focus();
+    if (source === "keyboard") pauseButton.focus({ preventScroll: true });
   }
 
   root.querySelector(".start-button").addEventListener("click", () => {
@@ -590,7 +570,11 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
     refresh();
   });
 
-  pauseButton.addEventListener("click", () => pauseWorkout("button"));
+  pauseButton.addEventListener("click", () => {
+    if (engine.status === TIMER_STATES.RUNNING) pauseWorkout("button");
+    else if (engine.status === TIMER_STATES.PAUSED) resumeWorkout("button");
+  });
+  pauseButton.addEventListener("pointerdown", (event) => event.preventDefault());
 
   for (const button of previousButtons) {
     button.addEventListener("click", () => {
@@ -608,9 +592,7 @@ export function mountApp(root, { title, steps }, engine, { sourcePage, onEdit } 
     });
   }
 
-  resumeButton.addEventListener("click", () => resumeWorkout("button"));
-
-  for (const restartButton of root.querySelectorAll(".paused-restart-button, .completed-restart-button")) {
+  for (const restartButton of root.querySelectorAll(".active-restart-button, .completed-restart-button")) {
     restartButton.addEventListener("click", () => {
       cancelSpeech();
       engine.restart();
