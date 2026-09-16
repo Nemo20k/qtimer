@@ -77,6 +77,7 @@ a:focus-visible {
   display: flex;
   flex: 1;
   flex-direction: column;
+  min-height: 0;
   min-width: 0;
 }
 
@@ -141,8 +142,10 @@ p {
   flex: 0 0 28%;
   flex-direction: column;
   margin: 1.5rem 0;
+  min-height: 0;
   min-width: 16rem;
   order: -1;
+  overflow: hidden;
   padding: 1rem 1.5rem 1rem 0;
 }
 
@@ -937,15 +940,31 @@ code {
 }
 
 @media (min-width: 700px) {
+  html,
+  body,
+  #app {
+    height: 100%;
+  }
+
   .app-shell {
+    height: 100dvh;
     padding-left: 2.5rem;
     padding-right: 2.5rem;
+  }
+
+  .app-layout {
+    height: 100%;
   }
 }
 
 @media (max-width: 699px) {
+  .app-shell {
+    height: auto;
+  }
+
   .app-layout {
     display: block;
+    height: auto;
   }
 
   .workout-sidebar {
@@ -1031,6 +1050,8 @@ code {
     display: flex;
     flex-direction: column;
     max-height: 82dvh;
+    min-height: 0;
+    overflow: hidden;
     padding: 1.25rem max(1rem, env(safe-area-inset-right)) max(1.25rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
     width: 100%;
   }
@@ -1049,7 +1070,8 @@ code {
   }
 
   .overlay-panel .workout-list {
-    max-height: 65dvh;
+    flex: 1 1 auto;
+    max-height: none;
   }
 }
 
