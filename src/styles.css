@@ -357,13 +357,17 @@ button:disabled { cursor: wait; opacity: 0.6; transform: none; }
 .workout-warning-list { line-height: 1.45; margin: 0.75rem 0 0; padding-left: 1.2rem; }
 .generated-notice { background: #20261e; border: 1px solid #58694a; border-radius: 0.65rem; color: #d4e1c5; line-height: 1.45; margin: 0 auto 1.5rem; max-width: 42rem; padding: 0.8rem 1rem; }
 .edit-notice { background: #20261e; }
-.ai-assistant-section { border-top: 1px solid #272d32; margin-top: 2.5rem; padding: 2rem 0 0; text-align: center; }
+.ai-assistant-section { align-items: center; background: #171b1f; border: 1px solid #2d343a; border-radius: 1rem; display: grid; gap: 1.5rem 2rem; grid-template-columns: minmax(0, 1.35fr) minmax(14rem, 0.65fr); margin-top: 2.5rem; padding: clamp(1.25rem, 4vw, 2rem); }
 .ai-assistant-section h2 { color: #f5c451; font-family: Georgia, "Times New Roman", serif; font-size: 1.45rem; letter-spacing: 0.02em; margin: 0.55rem 0 0.65rem; }
-.ai-assistant-section > p:not(.eyebrow) { color: #b5bbc1; line-height: 1.55; }
-.assistant-controls { display: flex; flex-wrap: wrap; gap: 0.65rem; justify-content: center; margin-top: 1.25rem; }
+.assistant-copy > p:not(.eyebrow) { color: #b5bbc1; line-height: 1.55; margin-bottom: 0; }
+.assistant-actions { min-width: 0; }
+.assistant-primary-button { width: 100%; }
+.assistant-shortcuts { margin-top: 1rem; }
+.assistant-shortcuts-label { color: #707981; font-size: 0.72rem; margin: 0 0 0.55rem; text-align: center; }
+.assistant-controls { display: flex; flex-wrap: wrap; gap: 0.65rem; justify-content: center; }
 .assistant-button { background: #1b2024; border: 1px solid #343b42; color: #f4f5f6; font-size: 0.75rem; min-height: 46px; padding: 0 1rem; }
 .assistant-button:hover { border-color: #f5c451; color: #f5c451; }
-.assistant-feedback { margin: 0.75rem 0 0; }
+.assistant-feedback { margin: 0.75rem 0 0; text-align: center; }
 
 .edit-confirmation {
   align-items: center;
@@ -422,7 +426,9 @@ button:disabled { cursor: wait; opacity: 0.6; transform: none; }
   .builder-panel { padding-left: 0.85rem; padding-right: 0.85rem; }
   .ai-prompt-meta { flex-direction: column; gap: 0.2rem; }
   .ai-submit-button, .start-workout-button { width: 100%; }
-  .assistant-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ai-assistant-section { display: block; }
+  .assistant-actions { margin-top: 1.25rem; }
+  .assistant-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .assistant-button { min-width: 0; padding: 0 0.4rem; }
 }
 

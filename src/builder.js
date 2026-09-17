@@ -105,11 +105,19 @@ export function mountBuilder(root, { editWorkout } = {}) {
       </section>
 
       <section class="ai-assistant-section" aria-labelledby="assistant-title">
-        <p class="eyebrow">WORKOUTS, WHEREVER YOU PLAN THEM</p>
-        <h2 id="assistant-title">Use QTimer in your AI assistant</h2>
-        <p>Get ready-to-run QTimer links directly from your workout conversations.</p>
-        <div class="assistant-controls" aria-label="AI assistant instruction controls"></div>
-        <p class="assistant-feedback" role="status" aria-live="polite"></p>
+        <div class="assistant-copy">
+          <p class="eyebrow">WORKOUTS, WHEREVER YOU PLAN THEM</p>
+          <h2 id="assistant-title">Your AI plans it. QTimer runs it.</h2>
+          <p>Already planning workouts with ChatGPT, Claude, or Gemini? Paste these instructions into your conversation, then ask for a workout with a ready-to-start QTimer link.</p>
+        </div>
+        <div class="assistant-actions">
+          <button class="primary-button assistant-primary-button" type="button">Copy AI instructions</button>
+          <div class="assistant-shortcuts">
+            <p class="assistant-shortcuts-label">Copy for a specific assistant:</p>
+            <div class="assistant-controls" aria-label="AI assistant instruction controls"></div>
+          </div>
+          <p class="assistant-feedback" role="status" aria-live="polite"></p>
+        </div>
       </section>
       ${siteFooterMarkup()}
     </main>
@@ -133,6 +141,7 @@ export function mountBuilder(root, { editWorkout } = {}) {
   const aiLoading = root.querySelector(".ai-loading");
   const aiError = root.querySelector(".ai-error");
   const aiPromptCount = root.querySelector(".ai-prompt-count");
+  const assistantPrimaryButton = root.querySelector(".assistant-primary-button");
   const assistantControls = root.querySelector(".assistant-controls");
   const assistantFeedback = root.querySelector(".assistant-feedback");
   const summaryText = root.querySelector(".builder-summary-text");
@@ -221,14 +230,23 @@ export function mountBuilder(root, { editWorkout } = {}) {
     try {
       await navigator.clipboard.writeText(text);
     } catch {
-      const area = document.createElement("textarea");
-      area.value = text;
-      document.body.append(area);
-      area.select();
-      document.execCommand("copy");
-      area.remove();
+      try {
+        const area = document.createElement("textarea");
+        area.value = text;
+        document.body.append(area);
+        try {
+          area.select();
+          if (!document.execCommand("copy")) throw new Error("Clipboard copy failed");
+        } finally {
+          area.remove();
+        }
+      } catch {
+        setTextFeedback(feedback, "Couldn’t copy. Please copy manually.");
+        return false;
+      }
     }
     setTextFeedback(feedback, message);
+    return true;
   }
 
   function setAiLoading(loading) {
@@ -362,11 +380,19 @@ export function mountBuilder(root, { editWorkout } = {}) {
     }
   });
 
-  ASSISTANT_PROVIDERS.forEach((provider) => {
+  assistantPrimaryButton.addEventListener("click", async () => {
+    await copyAssistantInstructions("Copy universal instructions", {
+      copy: (text) => copyToClipboard(text, assistantFeedback, "Copied! Paste into your AI chat, then ask for a workout."),
+      instructions: getAssistantInstructions("Copy universal instructions", baseUrl),
+    });
+  });
+
+  ASSISTANT_PROVIDERS.filter((provider) => provider !== "Copy universal instructions").forEach((provider) => {
     const button = document.createElement("button");
     button.className = "assistant-button";
     button.type = "button";
     button.textContent = provider;
+    button.setAttribute("aria-label", `Copy ${provider} instructions`);
     button.addEventListener("click", async () => {
       await copyAssistantInstructions(provider, {
         copy: (text) => copyToClipboard(text, assistantFeedback, `${provider} instructions copied.`),

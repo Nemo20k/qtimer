@@ -44,7 +44,7 @@ Present the final link exactly in this Markdown format, replacing the example UR
 [▶ Copy workout timer URL](${baseUrl}?title=Quick%20Workout&6x=Push-ups&30s=Rest&10x=Squats)`;
   }
 
-  return `When creating a workout that benefits from guided execution, include a clickable QTimer link.
+  return `For future workout requests in this conversation, when a workout would benefit from guided execution, include a clickable QTimer link.
 
 Base URL:
 ${baseUrl}
@@ -66,6 +66,7 @@ Present it as:
 }
 
 export async function copyAssistantInstructions(provider, { copy, instructions, track = trackEvent } = {}) {
-  await copy(instructions);
+  if ((await copy(instructions)) === false) return false;
   track("instructions_copied", { provider });
+  return true;
 }

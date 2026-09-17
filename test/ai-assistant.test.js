@@ -60,3 +60,16 @@ test("assistant controls use provider-specific instructions where needed", async
     ["instructions_copied", "Copy universal instructions"],
   ]);
 });
+
+test("failed instruction copies do not track a copied event", async () => {
+  const events = [];
+
+  const copied = await copyAssistantInstructions("Copy universal instructions", {
+    instructions: "instructions",
+    copy: async () => false,
+    track: (name) => events.push(name),
+  });
+
+  assert.equal(copied, false);
+  assert.deepEqual(events, []);
+});
