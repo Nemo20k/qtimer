@@ -6,9 +6,15 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "test": "node --test"
+    "test": "node --test",
+    "demo:edit": "node tools/qtimer-demo/edit.mjs",
+    "demo:preview": "node tools/qtimer-demo/edit.mjs preview"
   },
   "devDependencies": {
+    "@remotion/cli": "^4.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "remotion": "^4.0.0",
     "vite": "^6.0.0"
   }
 }

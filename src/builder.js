@@ -8,11 +8,10 @@ import { copyAssistantInstructions, getAssistantInstructions, ASSISTANT_PROVIDER
 import { siteFooterMarkup } from "./site-footer.js";
 import { formatNaturalDuration, workoutSummary } from "./workout-totals.js";
 
-const EXAMPLE_PROMPTS = [
-  "Create a 15-minute kettlebell workout with a warm-up and short rests.",
-  "10 min · No equipment",
-  "12 min · Running",
-  "5 min · Kettlebell",
+export const EXAMPLE_PROMPTS = [
+  { label: "10 min · No equipment", prompt: "Create a 10-minute bodyweight workout with no equipment." },
+  { label: "12 min · Running", prompt: "Create a 12-minute running interval workout." },
+  { label: "5 min · Kettlebell", prompt: "Create a 5-minute kettlebell workout." },
 ];
 
 function friendlyApiError(error) {
@@ -338,11 +337,11 @@ export function mountBuilder(root, { editWorkout } = {}) {
     trackEvent("ai_generate_succeeded", workoutParameters(workoutStepsForAnalytics(response.workout)));
   }
 
-  [EXAMPLE_PROMPTS[1], EXAMPLE_PROMPTS[2], EXAMPLE_PROMPTS[3]].forEach((prompt) => {
+  EXAMPLE_PROMPTS.forEach(({ label, prompt }) => {
     const button = document.createElement("button");
     button.className = "example-prompt";
     button.type = "button";
-    button.textContent = prompt;
+    button.textContent = label;
     button.addEventListener("click", () => {
       aiPrompt.value = prompt;
       aiPrompt.dispatchEvent(new Event("input"));

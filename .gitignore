@@ -1,3 +1,5 @@
 node_modules/
 dist/
 .pnpm-store/
+artifacts/qtimer-demo/
+artifacts/qtimer-skill-evals/

@@ -1,6 +1,23 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { hasMeaningfulManualEdits, warningMessages } from "../src/builder.js";
+import { EXAMPLE_PROMPTS, hasMeaningfulManualEdits, warningMessages } from "../src/builder.js";
+import { createGenerationController } from "../src/ai-generator.js";
+
+test("AI suggestions submit explicit workout requests with their advertised duration and activity", async () => {
+  const submitted = [];
+  const controller = createGenerationController(async (prompt) => { submitted.push(prompt); });
+  assert.deepEqual(EXAMPLE_PROMPTS.map(({ label }) => label), [
+    "10 min · No equipment", "12 min · Running", "5 min · Kettlebell",
+  ]);
+  for (const { prompt } of EXAMPLE_PROMPTS) {
+    assert.equal((await controller.submit(prompt)).status, "success");
+  }
+  assert.deepEqual(submitted, [
+    "Create a 10-minute bodyweight workout with no equipment.",
+    "Create a 12-minute running interval workout.",
+    "Create a 5-minute kettlebell workout.",
+  ]);
+});
 import { builderRowsFromWorkout, copyGeneratedWorkout, normalizeGeneratedWorkout, startGeneratedWorkout, workoutStepsForAnalytics } from "../src/ai-workout.js";
 import { parseTimerUrl } from "../src/parser.js";
 
